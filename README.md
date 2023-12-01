@@ -1,2 +1,1 @@
-# examples
-Examples, guides and demos around KEDA
+# Examples, guides and demos around KEDA
