@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kafka-exporter-pod-monitor
+  namespace: monitoring  # Namespace where Prometheus Operator is installed
+  labels:
+    release: prometheus-stack  # Adjust to match the label of your Prometheus instance
+spec:
+  selector:
+    matchLabels:
+      strimzi.io/name: my-cluster-kafka-exporter  # Label of Kafka Exporter pods
+  namespaceSelector:
+    matchNames:
+      - kafka  # Namespace where Kafka Exporter pods are running
+  podMetricsEndpoints:
+    - port: tcp-prometheus  # Port name where Kafka Exporter exposes metrics
+      interval: 15s
+      path: /metrics
