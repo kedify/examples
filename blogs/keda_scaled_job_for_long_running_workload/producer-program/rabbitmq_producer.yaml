@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: producer-program
+spec:
+  template:
+    metadata:
+      labels:
+        app: producer-program
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: producer-program
+          image: sharadregoti/producer-program:v0.1.0
+          env:
+            - name: MESSAGE_COUNT
+              value: "15"
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: address
