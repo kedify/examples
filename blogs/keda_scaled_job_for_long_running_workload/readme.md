@@ -38,13 +38,13 @@ These are some inherent problems of autoscaling that KEDA solves. In this blog p
 │   # Contain rabbitmq operator cluster config
 ├── rabbitmq_cluster.yaml
 │
-│   # Contain Keda scaled job with amqp protocol config
+│   # Contain KEDA scaled job with amqp protocol config
 ├── rabbitmq_scaled_job_amqp.yaml
 │
-│   # Contain Keda scaled object with amqp protocol config
+│   # Contain KEDA scaled object with amqp protocol config
 ├── rabbitmq_scaled_object_amqp.yaml
 |
-│   # Contain Keda scaled object with http protocol config
+│   # Contain KEDA scaled object with http protocol config
 │   # Not used in the blog post
 ├── rabbitmq_scaled_object_http.yaml
 ```
