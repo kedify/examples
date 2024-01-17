@@ -25,11 +25,13 @@ spec:
           image: sharadregoti/consumer-program:v0.1.0
           env:
             - name: COUNTER_COUNT_URL
-              value: "http://counter-service:8080/create/count"
+              value: "http://result-analyzer-service:8080/create/count"
             - name: COUNTER_KILL_URL
-              value: "http://counter-service:8080/kill/count"
+              value: "http://result-analyzer-service:8080/kill/count"
             - name: SLEEP_TIME
-              value: "600"
+              value: "360"
+            - name: AUTO_ACK
+              value: "true"
             - name: RABBITMQ_URL
               valueFrom:
                 secretKeyRef:

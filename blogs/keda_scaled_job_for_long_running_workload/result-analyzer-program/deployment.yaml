@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: counter-deployment
+  name: result-analyzer
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: counter
+      app: result-analyzer
   template:
     metadata:
       labels:
-        app: counter
+        app: result-analyzer
     spec:
       containers:
-      - name: counter
-        image: sharadregoti/counter-program:v0.1.0
-        ports:
-        - containerPort: 8080
+        - name: result-analyzer
+          image: sharadregoti/counter-program:v0.1.0
+          ports:
+            - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: counter-service
+  name: result-analyzer-service
 spec:
   selector:
     app: counter

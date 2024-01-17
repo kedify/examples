@@ -1,44 +1,81 @@
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: rabbitmq-credentials
-# type: Opaque
-# data:
-#   address: "YW1xcDovL2RlZmF1bHRfdXNlcl9obUdaRmhkZXdxNjVQNGRJZHg3OnFjOThuNGlHRDdNWVhNQlZGY0lPMm10QjV2b0R1Vl9uQHJhYmJpdG1xLWNsdXN0ZXI6NTY3Mg=="
-# ---
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: amqp-consumer-deployment
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       app: amqp-consumer
-#   template:
-#     metadata:
-#       labels:
-#         app: amqp-consumer
-#     spec:
-#       containers:
-#         - name: amqp-consumer
-#           image: sharadregoti/amqp-tools:v0.1.0
-#           command: ["/bin/sh", "-c"]
-#           args:
-#             - |
-#               echo "Waiting for message...\n"
-#               amqp-consume --url="$RABBITMQ_URL" -q "testqueue" -c 1 cat
-#               echo "message received, processing..."
-#               i=1
-#               while [ $i -le 360 ]; do
-#                 echo "Sleeping second $i"
-#                 sleep 1
-#                 i=$((i+1))
-#               done
-#               curl -X POST http://counter-service:8080/create/count -s
-#           env:
-#             - name: RABBITMQ_URL
-#               valueFrom:
-#                 secretKeyRef:
-#                   name: rabbitmq-credentials
-#                   key: address
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-credentials
+type: Opaque
+data:
+  address: "YW1xcDovL2RlZmF1bHRfdXNlcl9obUdaRmhkZXdxNjVQNGRJZHg3OnFjOThuNGlHRDdNWVhNQlZGY0lPMm10QjV2b0R1Vl9uQHJhYmJpdG1xLWNsdXN0ZXI6NTY3Mg=="
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumer-script-config
+data:
+  consumer-script.sh: |
+    #! /bin/bash
+    currentMessage=""
+
+    handle_sigterm() {
+        if [ -n "$currentMessage" ]; then
+            echo "SIGTERM signal received while processing a message."
+            curl -X POST http://result-analyzer-service:8080/kill/count -s
+            echo "Kill count HTTP request sent."
+        else
+            echo "SIGTERM signal received, but no message was being processed."
+        fi
+        exit 0
+    }
+
+    trap 'handle_sigterm' SIGTERM
+
+    while true; do
+      echo "Waiting for message...\n"
+      if ! currentMessage=$(amqp-consume --url="$RABBITMQ_URL" -q "testqueue" -c 1 cat); then
+          echo "Error occurred during message consumption. Exiting...\n"
+          continue
+      fi
+      echo "Message received, processing: $currentMessage \n"
+
+      i=1
+      while [ $i -le 360 ]; do
+          echo "Encoding video $i"
+          sleep 1
+          i=$((i+1))
+      done
+      currentMessage=""
+      curl -X POST http://result-analyzer-service:8080/create/count -s
+      echo "Waiting for next message...\n"
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-program
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer-program
+  template:
+    metadata:
+      labels:
+        app: consumer-program
+    spec:
+      containers:
+        - name: consumer-program
+          image: sharadregoti/amqp-tools:v0.1.0
+          command: ["/bin/bash"]
+          args: ["/scripts/consumer-script.sh"]
+          volumeMounts:
+            - name: script-volume
+              mountPath: /scripts
+          env:
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: address
+      volumes:
+        - name: script-volume
+          configMap:
+            name: consumer-script-config

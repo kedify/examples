@@ -7,6 +7,8 @@ import signal
 # Declare a global variable
 currentMessage = None
 
+auto_ack = os.getenv('AUTO_ACK', 'true')
+
 def send_http_kill_request():
     global currentMessage  # Correct use of global
     if currentMessage is not None:
@@ -39,6 +41,14 @@ def callback(ch, method, properties, body):
     global currentMessage  # Correct use of global
     currentMessage = body.decode()
     print(currentMessage)
+
+    auto_ack_env = os.getenv('AUTO_ACK', 'true')  # Read the environment variable (as string)
+    auto_ack = auto_ack_env.lower() in ['true', '1', 't', 'y', 'yes']  # Convert to boolean
+    if auto_ack:
+        print("Auto acknowledging....")
+        # Acknowledge the message after processing is complete
+        # ch.basic_ack(delivery_tag=method.delivery_tag)
+
     sleep_time = os.getenv('SLEEP_TIME', '300')
     sleep_time = int(sleep_time)
     for i in range(1, sleep_time):
@@ -47,8 +57,11 @@ def callback(ch, method, properties, body):
 
     send_http_request()
 
-    # Acknowledge the message after processing is complete
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+    if not auto_ack:
+        print("Manual acknowledging....")
+        # Acknowledge the message after processing is complete
+        # ch.basic_ack(delivery_tag=method.delivery_tag)
+    
     currentMessage = None  # Unset the global variable
     print("Waiting for message...\n")
 
@@ -67,8 +80,11 @@ def main():
     channel.basic_qos(prefetch_count=1)
 
     print("Waiting for message...\n")
+
+    # When i enable auto_ack, all messages are read at once
+    # When i diable auto_ack, messages are read one by one, but if i peform manual ack before process & an additional message is already read & queued by client
     # Set auto_ack to False for manual acknowledgement
-    channel.basic_consume(queue='testqueue', on_message_callback=callback, auto_ack=False)
+    channel.basic_consume(queue='testqueue', on_message_callback=callback, auto_ack=True)
 
     try:
         channel.start_consuming()
