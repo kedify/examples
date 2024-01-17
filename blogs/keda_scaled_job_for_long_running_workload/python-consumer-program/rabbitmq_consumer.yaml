@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-credentials
+type: Opaque
+data:
+  address: "YW1xcDovL2RlZmF1bHRfdXNlcl9obUdaRmhkZXdxNjVQNGRJZHg3OnFjOThuNGlHRDdNWVhNQlZGY0lPMm10QjV2b0R1Vl9uQHJhYmJpdG1xLWNsdXN0ZXI6NTY3Mg=="
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-program
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer-program
+  template:
+    metadata:
+      labels:
+        app: consumer-program
+    spec:
+      containers:
+        - name: consumer-program
+          image: ghcr.io/kedify/blog05-python-consumer-program:latest
+          env:
+            - name: COUNTER_COUNT_URL
+              value: "http://result-analyzer-service:8080/create/count"
+            - name: COUNTER_KILL_URL
+              value: "http://result-analyzer-service:8080/kill/count"
+            - name: SLEEP_TIME
+              value: "360"
+            - name: AUTO_ACK
+              value: "true"
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: address

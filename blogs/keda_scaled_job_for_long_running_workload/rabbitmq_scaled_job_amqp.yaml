@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-credentials
+type: Opaque
+data:
+  address: "YW1xcDovL2RlZmF1bHRfdXNlcl9obUdaRmhkZXdxNjVQNGRJZHg3OnFjOThuNGlHRDdNWVhNQlZGY0lPMm10QjV2b0R1Vl9uQHJhYmJpdG1xLWNsdXN0ZXI6NTY3Mg=="
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keda-rabbitmq-secret
+data:
+  host: "YW1xcDovL2RlZmF1bHRfdXNlcl9obUdaRmhkZXdxNjVQNGRJZHg3OnFjOThuNGlHRDdNWVhNQlZGY0lPMm10QjV2b0R1Vl9uQHJhYmJpdG1xLWNsdXN0ZXIuZGVmYXVsdDo1Njcy"
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-trigger-auth-rabbitmq-conn
+  namespace: default
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: keda-rabbitmq-secret
+      key: host
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumer-script-config
+data:
+  consumer-script.sh: |
+    #! /bin/bash
+    currentMessage=""
+
+    handle_sigterm() {
+        if [ -n "$currentMessage" ]; then
+            echo "SIGTERM signal received while processing a message."
+            curl -X POST http://result-analyzer-service:8080/kill/count -s
+            echo "Kill count HTTP request sent."
+        else
+            echo "SIGTERM signal received, but no message was being processed."
+        fi
+        exit 0
+    }
+
+    trap 'handle_sigterm' SIGTERM
+
+    echo "Waiting for message...\n"
+    if ! currentMessage=$(amqp-consume --url="$RABBITMQ_URL" -q "testqueue" -c 1 cat); then
+        echo "Error occurred during message consumption. Exiting...\n"
+        continue
+    fi
+    echo "Message received, processing: $currentMessage \n"
+
+    i=1
+    while [ $i -le 360 ]; do
+        echo "Encoding video $i"
+        sleep 1
+        i=$((i+1))
+    done
+    currentMessage=""
+    curl -X POST http://result-analyzer-service:8080/create/count -s
+    echo "Waiting for next message...\n"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: rabbitmq-scaledjob
+  namespace: default
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        containers:
+          - name: consumer-program
+            image: ghcr.io/kedify/blog05-cli-consumer-program:latest
+            command: ["/bin/bash"]
+            args: ["/scripts/consumer-script.sh"]
+            volumeMounts:
+              - name: script-volume
+                mountPath: /scripts
+            env:
+              - name: RABBITMQ_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: rabbitmq-credentials
+                    key: address
+        volumes:
+          - name: script-volume
+            configMap:
+              name: consumer-script-config
+        restartPolicy: Never
+  pollingInterval: 10 # How often KEDA will check the RabbitMQ queue
+  successfulJobsHistoryLimit: 100 # Number of successful jobs to keep
+  failedJobsHistoryLimit: 100 # Number of failed jobs to keep
+  maxReplicaCount: 100 # Maximum number of jobs that KEDA can create
+  scalingStrategy:
+    strategy: "default" # Scaling strategy (default, custom, or accurate)
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: testqueue
+        mode: QueueLength
+        value: "1" # Number of messages per job
+      authenticationRef:
+        name: keda-trigger-auth-rabbitmq-conn

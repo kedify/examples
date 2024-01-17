@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result-analyzer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: result-analyzer
+  template:
+    metadata:
+      labels:
+        app: result-analyzer
+    spec:
+      containers:
+        - name: result-analyzer
+          image: ghcr.io/kedify/blog05-result-analyzer-program:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: result-analyzer-service
+spec:
+  selector:
+    app: result-analyzer
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

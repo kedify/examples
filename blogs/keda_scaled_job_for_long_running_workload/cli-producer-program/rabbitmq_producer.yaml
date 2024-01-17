@@ -1,0 +1,77 @@
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: plumber-config
+# data:
+#   input.json: |
+#     {"order_id": "1", "status": "processed"}
+#     {"order_id": "2", "status": "processed"}
+#     {"order_id": "3", "status": "processed"}
+#     {"order_id": "4", "status": "processed"}
+#     {"order_id": "5", "status": "processed"}
+#     {"order_id": "6", "status": "processed"}
+#     {"order_id": "7", "status": "processed"}
+#     {"order_id": "8", "status": "processed"}
+#     {"order_id": "9", "status": "processed"}
+#     {"order_id": "10", "status": "processed"}
+
+
+# # {"order_id": "11", "status": "processed"}
+# # {"order_id": "12", "status": "processed"}
+# # {"order_id": "13", "status": "processed"}
+# # {"order_id": "14", "status": "processed"}
+# # {"order_id": "15", "status": "processed"}
+# # {"order_id": "16", "status": "processed"}
+# # {"order_id": "17", "status": "processed"}
+# # {"order_id": "18", "status": "processed"}
+# # {"order_id": "19", "status": "processed"}
+# # {"order_id": "20", "status": "processed"}
+# # {"order_id": "21", "status": "processed"}
+# # {"order_id": "22", "status": "processed"}
+# # {"order_id": "23", "status": "processed"}
+# # {"order_id": "24", "status": "processed"}
+# # {"order_id": "25", "status": "processed"}
+# # {"order_id": "26", "status": "processed"}
+# # {"order_id": "27", "status": "processed"}
+# # {"order_id": "28", "status": "processed"}
+# # {"order_id": "29", "status": "processed"}
+# # {"order_id": "30", "status": "processed"}
+# # {"order_id": "31", "status": "processed"}
+# # {"order_id": "32", "status": "processed"}
+# # {"order_id": "33", "status": "processed"}
+# # {"order_id": "34", "status": "processed"}
+# # {"order_id": "35", "status": "processed"}
+# # {"order_id": "36", "status": "processed"}
+# # {"order_id": "37", "status": "processed"}
+# # {"order_id": "38", "status": "processed"}
+# # {"order_id": "39", "status": "processed"}
+# # {"order_id": "4 0", "status": "processed"}
+# ---
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: plumber-job
+# spec:
+#   template:
+#     spec:
+#       containers:
+#         - name: plumber
+#           image: streamdal/plumber
+#           command: ["/bin/sh", "-c"]
+#           args:
+#             - |
+#               cat /etc/config/input.json | plumber write rabbit --address="$RABBITMQ_ADDR" --exchange-name=direct --routing-key="orders.#" --exchange-declare --exchange-durable
+#           env:
+#             - name: RABBITMQ_ADDR
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: rabbitmq-credentials # Assumes you have a Kubernetes Secret with RabbitMQ credentials
+#                   key: address
+#           volumeMounts:
+#             - name: config-volume
+#               mountPath: /etc/config
+#       volumes:
+#         - name: config-volume
+#           configMap:
+#             name: plumber-config
+#       restartPolicy: Never

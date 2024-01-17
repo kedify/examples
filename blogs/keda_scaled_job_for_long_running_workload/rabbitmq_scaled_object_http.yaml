@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keda-rabbitmq-secret
+data:
+  host: "aHR0cDovL2RlZmF1bHRfdXNlcl9obUdaRmhkZXdxNjVQNGRJZHg3OnFjOThuNGlHRDdNWVhNQlZGY0lPMm10QjV2b0R1Vl9uQHJhYmJpdG1xLWNsdXN0ZXIuZGVmYXVsdDoxNTY3Mg=="
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-trigger-auth-rabbitmq-conn
+  namespace: default
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: keda-rabbitmq-secret
+      key: host
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: rabbitmq-scaledobject
+  namespace: default
+spec:
+  minReplicaCount: 0
+  pollingInterval: 10
+  scaleTargetRef:
+    name: consumer-program
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: http
+        queueName: testqueue
+        mode: QueueLength
+        value: "1"
+      authenticationRef:
+        name: keda-trigger-auth-rabbitmq-conn
