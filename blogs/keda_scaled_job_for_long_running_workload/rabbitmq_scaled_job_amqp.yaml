@@ -74,7 +74,7 @@ spec:
       spec:
         containers:
           - name: consumer-program
-            image: sharadregoti/amqp-tools:v0.1.0
+            image: ghcr.io/kedify/blog05-cli-consumer-program:latest
             command: ["/bin/bash"]
             args: ["/scripts/consumer-script.sh"]
             volumeMounts:

@@ -19,7 +19,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: producer-program
-          image: sharadregoti/producer-program:v0.1.0
+          image: ghcr.io/kedify/blog05-python-producer-program:latest
           env:
             - name: MESSAGE_COUNT
               value: "15"

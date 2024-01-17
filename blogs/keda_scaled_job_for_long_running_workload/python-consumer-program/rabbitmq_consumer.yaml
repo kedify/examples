@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: consumer-program
-          image: sharadregoti/consumer-program:v0.1.0
+          image: ghcr.io/kedify/blog05-python-consumer-program:latest
           env:
             - name: COUNTER_COUNT_URL
               value: "http://result-analyzer-service:8080/create/count"

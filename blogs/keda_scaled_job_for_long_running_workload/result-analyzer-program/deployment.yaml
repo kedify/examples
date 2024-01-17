@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: result-analyzer
-          image: sharadregoti/counter-program:v0.1.0
+          image: ghcr.io/kedify/blog05-result-analyzer-program:latest
           ports:
             - containerPort: 8080
 ---
@@ -24,7 +24,7 @@ metadata:
   name: result-analyzer-service
 spec:
   selector:
-    app: counter
+    app: result-analyzer
   ports:
     - protocol: TCP
       port: 8080
