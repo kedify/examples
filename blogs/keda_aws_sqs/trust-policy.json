@@ -1,0 +1,25 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "<replace-with-keda-operator-role-arn>"
+            },
+            "Action": "sts:AssumeRole"
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::<replace-with-your-aws-account-id>:oidc-provider/<replace-with-your-eks-open-idc>"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "<replace-with-your-eks-open-idc>:sub": "system:serviceaccount:default:aws-sqs"
+                }
+            }
+        }
+    ]
+}
