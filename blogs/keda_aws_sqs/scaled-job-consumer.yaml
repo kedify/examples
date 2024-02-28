@@ -68,7 +68,7 @@ spec:
                 mountPath: "/scripts"
             env:
               - name: QUEUE_URL
-                value: "https://sqs.ap-south-1.amazonaws.com/474532148129/test-queue"
+                value: "<put-your-sqs-queue-url-here>"
               - name: PROCESS_SLEEP_TIME
                 value: "30"
             command: ["/bin/sh", "/scripts/sqs-consumer.sh"]
@@ -84,6 +84,6 @@ spec:
       authenticationRef:
         name: keda-trigger-auth-aws-credentials
       metadata:
-        queueURL: "https://sqs.ap-south-1.amazonaws.com/474532148129/test-queue"
+        queueURL: "<put-your-sqs-queue-url-here>"
         queueLength: "1"
         awsRegion: "ap-south-1"

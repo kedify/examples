@@ -12,8 +12,7 @@ spec:
           image: amazon/aws-cli:2.15.23
           env:
             - name: QUEUE_URL
-              # value: "<put-your-sqs-queue-url-here>" # Replace with your SQS queue URL
-              value: "https://sqs.ap-south-1.amazonaws.com/474532148129/test-queue" # Replace with your SQS queue URL
+              value: "<put-your-sqs-queue-url-here>" # Replace with your SQS queue URL
             - name: NUM_MESSAGES
               value: "10" # Replace with the number of messages you want to send
           command: ["/bin/bash", "-c"]
