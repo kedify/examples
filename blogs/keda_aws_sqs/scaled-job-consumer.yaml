@@ -86,4 +86,4 @@ spec:
       metadata:
         queueURL: "<put-your-sqs-queue-url-here>"
         queueLength: "1"
-        awsRegion: "ap-south-1"
+        awsRegion: <put-your-aws-region>
