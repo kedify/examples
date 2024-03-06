@@ -1,0 +1,89 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-trigger-auth-aws-credentials
+  namespace: default
+spec:
+  podIdentity:
+    provider: aws
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sqs-consumer
+  namespace: default
+data:
+  sqs-consumer.sh: |
+    #!/bin/bash
+    apk update && apk add curl jq # Ensure both curl and jq are installed
+    QUEUE_URL="${QUEUE_URL}"
+    PROCESS_SLEEP_TIME="${PROCESS_SLEEP_TIME:-60}" # Default to 60 seconds if not set
+
+    while true; do
+      # Receive a message from the SQS queue
+      RESPONSE=$(aws sqs receive-message --queue-url "$QUEUE_URL" --visibility-timeout 600)
+
+      # Check if the response contains a message
+      if echo "$RESPONSE" | grep -q "MessageId"; then
+        # Extract the ReceiptHandle for deletion
+        RECEIPT_HANDLE=$(echo "$RESPONSE" | jq -r ".Messages[0].ReceiptHandle")
+
+        # Process the message here
+        echo "==========================================="
+        echo "Processing message with id $RECEIPT_HANDLE"
+        sleep "$PROCESS_SLEEP_TIME"
+
+        # Delete the message from the queue to prevent it from being received again
+        aws sqs delete-message --queue-url "$QUEUE_URL" --receipt-handle "$RECEIPT_HANDLE"
+
+        echo "Message processed and deleted"
+        break # Exit the loop after processing a message
+      else
+        echo "No messages found. Waiting..."
+        sleep 1 # Wait before polling the queue again
+      fi
+    done
+
+    curl -X POST http://result-analyzer-service:8080/create/count -s
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: video-processor
+  namespace: default
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        serviceAccountName: aws-sqs
+        volumes:
+          - name: script-volume
+            configMap:
+              name: sqs-consumer
+        containers:
+          - name: sqs-consumer
+            image: pebbletech/docker-aws-cli:add-jq
+            volumeMounts:
+              - name: script-volume
+                mountPath: "/scripts"
+            env:
+              - name: QUEUE_URL
+                value: "<put-your-sqs-queue-url-here>"
+              - name: PROCESS_SLEEP_TIME
+                value: "30"
+            command: ["/bin/sh", "/scripts/sqs-consumer.sh"]
+        restartPolicy: Never
+  pollingInterval: 10 # How often KEDA will check the AWS SQS queue
+  successfulJobsHistoryLimit: 100 # Number of successful jobs to keep
+  failedJobsHistoryLimit: 100 # Number of failed jobs to keep
+  maxReplicaCount: 100 # Maximum number of jobs that KEDA can create
+  scalingStrategy:
+    strategy: "default" # Scaling strategy (default, custom, or accurate)
+  triggers:
+    - type: aws-sqs-queue
+      authenticationRef:
+        name: keda-trigger-auth-aws-credentials
+      metadata:
+        queueURL: "<put-your-sqs-queue-url-here>"
+        queueLength: "1"
+        awsRegion: <put-your-aws-region>
