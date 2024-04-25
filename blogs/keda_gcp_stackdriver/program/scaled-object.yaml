@@ -1,0 +1,26 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-trigger-auth-gcp-credentials
+spec:
+  podIdentity:
+    provider: gcp
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: gcp-stackdriver-scaledobject
+spec:
+  scaleTargetRef:
+    name: web-server
+  triggers:
+    - type: gcp-stackdriver
+      authenticationRef:
+        name: keda-trigger-auth-gcp-credentials
+      metadata:
+        projectId: PROJECT_ID
+        filter: 'metric.type="custom.googleapis.com/500_error_rate"'
+        targetValue: "30"
+        alignmentPeriodSeconds: "60"
+        alignmentAligner: mean
+        alignmentReducer: sum
