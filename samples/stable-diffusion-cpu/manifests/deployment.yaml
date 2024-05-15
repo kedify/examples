@@ -16,4 +16,45 @@ spec:
     spec:
       containers:
       - image: ghcr.io/kedify/stable-diffusion-cpu
+      # - image: docker.io/jkremser/stable-diffusion-cpu
         name: stable-diffusion-cpu
+        volumeMounts:
+        - name: shared-images
+          mountPath: /app/results
+      - image: minio/mc
+        name: minio-sidecar
+        env:
+        - name: MINIO_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: rootUser
+        - name: MINIO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: rootPassword
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
+          mc admin info shared;
+          echo "Minio configured, starting sync.."
+          mc mirror --watch --exclude *.json /images shared/images;
+
+        volumeMounts:
+        - name: shared-images
+          mountPath: /images
+      # if possible, spread the pods across all schedulable nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: stable-diffusion-cpu
+      volumes:
+      - name: shared-images
+        emptyDir: {}

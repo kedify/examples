@@ -30,13 +30,14 @@ run-example: ## Runs the built image and creates an example image. Usage: PROMPT
 	@echo Done. Check the results directory.
 
 .PHONY: deploy-minio
+deploy-minio: ## Deploys minio into current Kubernetes context.
+	helm repo add minio https://charts.min.io/
 	helm upgrade -i \
-	--set resources.requests.memory=512Mi \
-	--set replicas=1 \
-	--set persistence.enabled=true \
-	--set mode=standalone \
-	---set rootUser=rootuser,rootPassword=password123 \
-	--generate-name minio/minio
+	minio minio/minio \
+	-f minio-values.yaml \
+	--set rootUser=rootuser,rootPassword=password123
+	# mc alias set local http://127.0.0.1:9000 $(kubectl get secret --namespace default minio -o jsonpath="{.data.rootUser}" | base64 --decode) $(kubectl get secret --namespace default minio -o jsonpath="{.data.rootPassword}" | base64 --decode)
+
 
 .PHONY: sync
 sync: $(VENDIR) ## Syncs the rupeshs/fastsdcpu the repo.
