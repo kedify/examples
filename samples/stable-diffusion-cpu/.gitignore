@@ -1,0 +1,8 @@
+# tools
+/bin
+
+# repo
+/fastsdcpu
+
+# results
+/results/*

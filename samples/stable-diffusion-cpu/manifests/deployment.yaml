@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: stable-diffusion-cpu
+  name: stable-diffusion-cpu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stable-diffusion-cpu
+  template:
+    metadata:
+      labels:
+        app: stable-diffusion-cpu
+    spec:
+      containers:
+      - image: ghcr.io/kedify/stable-diffusion-cpu
+        name: stable-diffusion-cpu

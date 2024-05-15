@@ -1,0 +1,11 @@
+apiVersion: vendir.k14s.io/v1alpha1
+directories:
+- contents:
+  - git:
+      commitTitle: 'Merge pull request #178 from loadfred/patch-1...'
+      sha: 1a54232d16663803f0d1d121ec00567c9bc129b6
+      tags:
+      - v1.0.0-beta.30-7-g1a54232
+    path: .
+  path: fastsdcpu
+kind: LockConfig
