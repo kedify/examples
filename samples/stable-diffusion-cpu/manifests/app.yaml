@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: stable-diffusion-cpu
+      annotations:
+        kubectl.kubernetes.io/default-container: stable-diffusion-cpu
     spec:
       containers:
       # - image: ghcr.io/kedify/stable-diffusion-cpu

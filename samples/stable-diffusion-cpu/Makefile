@@ -49,7 +49,7 @@ run-example: ## Runs the built image and creates an example image. Usage: PROMPT
 deploy-minio: ## Deploys minio into current Kubernetes context.
 	@$(call say,Deploy Minio)
 	helm repo add minio https://charts.min.io/
-	helm upgrade -i \
+	@helm upgrade -i \
 	minio minio/minio \
 	--wait \
 	--timeout=2m \
@@ -57,11 +57,11 @@ deploy-minio: ## Deploys minio into current Kubernetes context.
 	--set rootUser=$(MINIO_USER),rootPassword=$(MINIO_PASSWORD)
 
 .PHONY: deploy-app
-deploy-app: ## Deploys the fastsdcpu deployment.
+deploy-app: ## Deploys the fastsdcpu deployment and webui.
 	@$(call say,Deploy stable diffusion app)
 	kubectl apply -f manifests/app.yaml
 	kubectl apply -f manifests/webapp.yaml
-	kubectl wait --timeout=60s --for=condition=ready pod -lapp=stable-diffusion-webui
+	kubectl wait --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
 	kubectl wait --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-cpu
 
 .PHONY: deploy-kafka
@@ -85,10 +85,10 @@ deploy-rabbitmq: ## Deploys rabbitmq.
 	@kubectl create secret generic stablediff-rabbitmq --from-literal host=amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@rabbitmq-cluster.rabbitmq-system.svc.cluster.local:5672 --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f manifests/rabbitmq.yaml
 	kubectl wait --timeout=90s -nrabbitmq-system --for=condition=established crd/rabbitmqclusters.rabbitmq.com
-	kubectl wait --timeout=90s -nrabbitmq-system --for=condition=ready pod -lapp.kubernetes.io/name=rabbitmq-cluster
+	@while ! kubectl wait --timeout=90s -nrabbitmq-system --for=condition=ready pod -lapp.kubernetes.io/name=rabbitmq-cluster; do "echo waiting for rabbitmq.."; sleep 1; done
 
 .PHONY: deploy
-deploy: deploy-minio deploy-kafka deploy-app ## Deploys minio and sample application.
+deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio and sample application.
 	@$(call say,Deploy everything)
 
 .PHONY: sync
