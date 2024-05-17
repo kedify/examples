@@ -51,8 +51,6 @@ deploy-minio: ## Deploys minio into current Kubernetes context.
 	helm repo add minio https://charts.min.io/
 	helm upgrade -i \
 	minio minio/minio \
-	-nminio \
-	--create-namespace \
 	--wait \
 	--timeout=2m \
 	-f minio-values.yaml \
@@ -63,8 +61,8 @@ deploy-app: ## Deploys the fastsdcpu deployment.
 	@$(call say,Deploy stable diffusion app)
 	kubectl apply -f manifests/app.yaml
 	kubectl apply -f manifests/webapp.yaml
-	kubectl wait --timeout=300s --for=condition=ready pod -lapp=stable-diffusion-webui
-	kubectl wait --timeout=300s --for=condition=ready pod -lapp=stable-diffusion-cpu
+	kubectl wait --timeout=60s --for=condition=ready pod -lapp=stable-diffusion-webui
+	kubectl wait --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-cpu
 
 .PHONY: deploy-kafka
 deploy-kafka: ## Deploys the strimzi operator and creates a kafka cluster with a single topic.

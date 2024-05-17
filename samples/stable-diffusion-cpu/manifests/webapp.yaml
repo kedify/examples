@@ -2,25 +2,25 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: stable-diffusion-cpu
-  name: stable-diffusion-cpu
+    app: stable-diffusion-webui
+  name: stable-diffusion-webui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stable-diffusion-cpu
+      app: stable-diffusion-webui
   template:
     metadata:
       labels:
-        app: stable-diffusion-cpu
+        app: stable-diffusion-webui
     spec:
       containers:
-      # - image: ghcr.io/kedify/stable-diffusion-cpu
-      - image: jkremser/stable-diffusion-cpu
-        name: stable-diffusion-cpu
+      # - image: ghcr.io/kedify/stable-diffusion-webui
+      - image: jkremser/stable-diffusion-webui
+        name: stable-diffusion-webui
         volumeMounts:
         - name: shared-images
-          mountPath: /app/results
+          mountPath: /app/public/generated
       - image: minio/mc
         name: minio-sidecar
         env:
@@ -46,21 +46,11 @@ spec:
           mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
           mc admin info shared;
           echo "Minio configured, starting sync.."
-          mc mirror --watch --exclude *.json /images shared/images;
+          mc mirror --watch --exclude *.json shared/images /images;
 
         volumeMounts:
         - name: shared-images
           mountPath: /images
-      # if possible, spread the pods across all schedulable nodes
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app: stable-diffusion-cpu
       volumes:
       - name: shared-images
         emptyDir: {}
