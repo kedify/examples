@@ -1,24 +1,21 @@
 'use server';
 
 
-import type { NextPage } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import type { ImageProps } from "./types";
 import { useRouter } from "next/router";
-import { useImagesQuery } from "./queries";
-import { getAvailableImages } from "./services/images";
+import { getAvailableImages, sendToQueue } from "./services/images";
 
-const Home = ({ images }: { images: ImageProps[] }) => {
-  // const paths = useImagesQuery();
+const Home = () => {
   const paths = getAvailableImages();
   console.log('prom');
   paths.then(p => {
     console.log(`image paths: ` + p)
   });
-  
 
-  images = [{
+  sendToQueue(new Date().toString());
+
+  const images = [{
     id: 1,
     height: "256",
     width: "256",

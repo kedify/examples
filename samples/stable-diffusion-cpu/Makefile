@@ -2,7 +2,9 @@
 #		CONSTANTS
 ###############################
 # IMAGE ?= ghcr.io/kedify/stable-diffusion-cpu
+# WEBUI_IMAGE ?= ghcr.io/kedify/stable-diffusion-webui
 IMAGE ?= docker.io/jkremser/stable-diffusion-cpu
+WEBUI_IMAGE ?= docker.io/jkremser/stable-diffusion-webui
 HACK_BIN ?= bin
 VENDIR := $(abspath $(HACK_BIN)/vendir)
 
@@ -23,10 +25,15 @@ NUM_IMAGES ?= 1
 all: help
 
 
-.PHONY: build-image
-build-image: sync ## Builds the container image $(IMAGE).
+.PHONY: build-stable-diff-image
+build-stable-diff-image: sync ## Builds the container image $(IMAGE).
 	@$(call say,Build container image $(IMAGE))
 	docker build . -t $(IMAGE)
+
+.PHONY: build-webui-image
+build-webui-image: ## Builds the container image $(WEBUI_IMAGE).
+	@$(call say,Build container image $(WEBUI_IMAGE))
+	cd webui && docker build . -t $(WEBUI_IMAGE)
 
 .PHONY: run
 run: ## Runs the built image.
@@ -55,7 +62,9 @@ deploy-minio: ## Deploys minio into current Kubernetes context.
 deploy-app: ## Deploys the fastsdcpu deployment.
 	@$(call say,Deploy stable diffusion app)
 	kubectl apply -f manifests/app.yaml
-	#kubectl wait --timeout=300s --for=condition=ready pod -lapp=stable-diffusion-cpu
+	kubectl apply -f manifests/webapp.yaml
+	kubectl wait --timeout=300s --for=condition=ready pod -lapp=stable-diffusion-webui
+	kubectl wait --timeout=300s --for=condition=ready pod -lapp=stable-diffusion-cpu
 
 .PHONY: deploy-kafka
 deploy-kafka: ## Deploys the strimzi operator and creates a kafka cluster with a single topic.

@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.36.2",
+    "amqplib": "^0.10.4",
     "next": "14.2.3",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
