@@ -6,3 +6,6 @@
 
 # results
 /results/*
+
+# credentials
+/manifests/manifests/default_user.conf

@@ -15,8 +15,8 @@ spec:
         app: stable-diffusion-cpu
     spec:
       containers:
-      - image: ghcr.io/kedify/stable-diffusion-cpu
-      # - image: docker.io/jkremser/stable-diffusion-cpu
+      # - image: ghcr.io/kedify/stable-diffusion-cpu
+      - image: jkremser/stable-diffusion-cpu
         name: stable-diffusion-cpu
         volumeMounts:
         - name: shared-images
@@ -34,10 +34,16 @@ spec:
             secretKeyRef:
               name: minio
               key: rootPassword
+        - name: AMQP_URL
+          valueFrom:
+            secretKeyRef:
+              name: stablediff-rabbitmq
+              key: host
+
         command: ["/bin/sh", "-c"]
         args:
         - |
-          mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
+          mc alias set shared http://minio.minio.svc.cluster.local:9000 $MINIO_USERNAME $MINIO_PASSWORD;
           mc admin info shared;
           echo "Minio configured, starting sync.."
           mc mirror --watch --exclude *.json /images shared/images;

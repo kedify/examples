@@ -1,5 +1,8 @@
 ## Stable Diffusion use-case
 
+todo: diagram
+https://excalidraw.com/#json=YIHErhV8tspabLzG6tsRs,Ln9kTX9SDdsy2FUfd_05Uw
+
 ### try the container image locally
 
 ```
@@ -19,7 +22,7 @@ Reasons:
 - python
 
 Mitigations:
-- pre-fetch or even bake the the images on a newly spawned k8s nodes
+- pre-fetch or even bake the container images on a newly spawned k8s nodes
 
 ### GPUs being too expensive
 - https://cloud.google.com/spot-vms/pricing#gpu_pricing

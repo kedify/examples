@@ -6,5 +6,6 @@ directories:
       - path: .
         git:
           url: https://github.com/rupeshs/fastsdcpu
-          ref: origin/main
+          # ref: origin/main
+          ref: origin/1a54232d16663803f0d1d121ec00567c9bc129b6
           newRootPath: fastsdcpu
