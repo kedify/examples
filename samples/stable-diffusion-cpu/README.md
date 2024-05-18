@@ -12,6 +12,11 @@ PROMPT="cartoon dwarf" NUM_IMAGES=7 make run-example
 
 ### Deploy to K8s
 
+```
+make deploy
+```
+
+This deploys one replica of web ui, Minio, RabbitMQ and one replica of worker deployment that can generate the images.
 
 ## Common Pain Points
 

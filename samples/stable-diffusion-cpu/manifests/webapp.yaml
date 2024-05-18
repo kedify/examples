@@ -104,3 +104,21 @@ spec:
     targetPort: 3000
   selector:
     app: stable-diffusion-webui
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stable-diffusion-webui
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stable-diffusion-webui
+            port:
+              number: 80
