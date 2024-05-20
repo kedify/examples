@@ -1,0 +1,38 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: stable-diff-rabbitmq-connection
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: stablediff-rabbitmq
+      key: host
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: stable-diff
+spec:
+  scaleTargetRef:
+    name: stable-diffusion-cpu
+  pollingInterval: 10
+  cooldownPeriod: 5
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 15
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: tasks
+        mode: QueueLength
+        value: "2"
+        activationValue: "0"
+      authenticationRef:
+        name: stable-diff-rabbitmq-connection

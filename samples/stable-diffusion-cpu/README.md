@@ -1,7 +1,7 @@
 ## Stable Diffusion use-case
 
-todo: diagram
-https://excalidraw.com/#json=YIHErhV8tspabLzG6tsRs,Ln9kTX9SDdsy2FUfd_05Uw
+![diagram](./demo.png "Diagram")
+https://excalidraw.com/#json=p1f9nzyFye_sOgnV9AmIL,69oUi00h3HKXnsyzUReA5g
 
 ### try the container image locally
 

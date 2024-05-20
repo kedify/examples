@@ -3,18 +3,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { getAvailableImages, sendToQueue } from "./services/images";
 import { Prompt } from "./prompt";
 
 const Home = async () => {
-  const paths = getAvailableImages();
-  console.log('prom');
-  paths.then(p => {
-    console.log(`image paths: ` + p)
-  });
+  let paths = getAvailableImages();
 
-  // sendToQueue(new Date().toString());
   const images = (await paths).map((p, index) => {
     return {
       id: index,
@@ -23,7 +17,10 @@ const Home = async () => {
       url: '/generated/' + p,
     }
   });
-
+  setInterval(() => {
+    paths = getAvailableImages();
+  }, 1000)
+  
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">

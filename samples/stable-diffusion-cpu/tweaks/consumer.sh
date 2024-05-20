@@ -22,7 +22,8 @@ reQueue() {
 
 generate() {
   python /app/src/app.py --prompt "\"${1}\""
-  echo "Done. Image has been stored in /app/results."
+  echo "Done. Image for ${_imageRequest} has been stored in /app/results."
+  sleep 1
 }
 
 main() {
