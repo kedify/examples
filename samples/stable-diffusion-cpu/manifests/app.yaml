@@ -17,8 +17,7 @@ spec:
         kubectl.kubernetes.io/default-container: stable-diffusion-cpu
     spec:
       containers:
-      # - image: ghcr.io/kedify/stable-diffusion-cpu
-      - image: jkremser/stable-diffusion-cpu
+      - image: ghcr.io/kedify/stable-diffusion-cpu
         name: stable-diffusion-cpu
         imagePullPolicy: IfNotPresent
         volumeMounts:

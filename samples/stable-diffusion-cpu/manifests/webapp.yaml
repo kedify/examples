@@ -17,8 +17,7 @@ spec:
         kubectl.kubernetes.io/default-container: stable-diffusion-webui
     spec:
       containers:
-      # - image: ghcr.io/kedify/stable-diffusion-webui
-      - image: jkremser/stable-diffusion-webui
+      - image: ghcr.io/kedify/stable-diffusion-webui
         name: stable-diffusion-webui
         imagePullPolicy: IfNotPresent
         volumeMounts:

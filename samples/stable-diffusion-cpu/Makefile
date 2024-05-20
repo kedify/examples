@@ -1,10 +1,8 @@
 ###############################
 #		CONSTANTS
 ###############################
-# IMAGE ?= ghcr.io/kedify/stable-diffusion-cpu
-# WEBUI_IMAGE ?= ghcr.io/kedify/stable-diffusion-webui
-IMAGE ?= docker.io/jkremser/stable-diffusion-cpu
-WEBUI_IMAGE ?= docker.io/jkremser/stable-diffusion-webui
+IMAGE ?= ghcr.io/kedify/stable-diffusion-cpu
+WEBUI_IMAGE ?= ghcr.io/kedify/stable-diffusion-webui
 CLUSTER_NAME ?= stable-diff
 HACK_BIN ?= bin
 VENDIR := $(abspath $(HACK_BIN)/vendir)
