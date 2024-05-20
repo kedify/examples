@@ -87,6 +87,11 @@ deploy-rabbitmq: ## Deploys rabbitmq.
 	kubectl wait --timeout=90s -nrabbitmq-system --for=condition=established crd/rabbitmqclusters.rabbitmq.com
 	@while ! kubectl wait --timeout=90s -nrabbitmq-system --for=condition=ready pod -lapp.kubernetes.io/name=rabbitmq-cluster; do "echo waiting for rabbitmq.."; sleep 1; done
 
+.PHONY: deploy-scaledobject
+deploy-scaledobject: ## Deploys KEDA scaledobject.
+	@$(call say,Deploy KEDA scaledobject)
+	kubectl apply -f manifests/scaledobject.yaml
+
 .PHONY: deploy
 deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio and sample application.
 	@$(call say,Deploy everything)

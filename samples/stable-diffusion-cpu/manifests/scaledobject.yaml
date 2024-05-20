@@ -16,9 +16,9 @@ spec:
   scaleTargetRef:
     name: stable-diffusion-cpu
   pollingInterval: 10
-  cooldownPeriod: 5
+  cooldownPeriod: 300
   minReplicaCount: 0
-  maxReplicaCount: 10
+  maxReplicaCount: 8
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
@@ -32,7 +32,7 @@ spec:
         protocol: amqp
         queueName: tasks
         mode: QueueLength
-        value: "2"
+        value: "1"
         activationValue: "0"
       authenticationRef:
         name: stable-diff-rabbitmq-connection
