@@ -22,9 +22,11 @@ reQueue() {
 
 generate() {
   python /app/src/app.py --prompt "\"${1}\""
+  echo "Done. Image has been stored in /app/results."
 }
 
 main() {
+  createQ
   while true; do
     echo "Waiting for a task.."
     if ! _imageRequest=$(amqp-consume --url="$AMQP_URL" -q "${Q_NAME}" -c 1 cat); then

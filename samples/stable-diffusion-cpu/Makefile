@@ -10,10 +10,10 @@ HACK_BIN ?= bin
 VENDIR := $(abspath $(HACK_BIN)/vendir)
 
 MINIO_USER := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 8)
-MINIO_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!\#$%@' </dev/urandom | head -c 15)
+MINIO_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!\#$%' </dev/urandom | head -c 15)
 
 RABBITMQ_USER := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 8)
-RABBITMQ_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!\#$%@' </dev/urandom | head -c 15)
+RABBITMQ_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!\#$%' </dev/urandom | head -c 15)
 
 PROMPT ?= yellow submarine
 NUM_IMAGES ?= 1

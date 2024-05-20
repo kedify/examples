@@ -14,11 +14,10 @@
 
 FROM python:3.9
 WORKDIR /app
-COPY requirements.txt .
+COPY --chown=65532:65532 requirements.txt .
 # USER 65532:65532
 COPY --chown=65532:65532 fastsdcpu/ /app
-COPY requirements.txt .
-COPY tweaks/consumer.sh /app
+COPY --chown=65532:65532 requirements.txt .
 RUN pip --no-cache-dir install torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu && \
     pip --no-cache-dir install -r requirements.txt --user && \
     apt-get update && \
@@ -27,5 +26,6 @@ RUN pip --no-cache-dir install torch==2.2.2 --index-url https://download.pytorch
 
 # download models
 RUN python /app/src/app.py --prompt "dog" && rm /app/results/*
+COPY --chown=65532:65532 --chmod=755 tweaks/consumer.sh /app
 
-CMD ["/app/consumer.sh"]
+CMD ["/bin/bash", "/app/consumer.sh"]

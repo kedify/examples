@@ -20,9 +20,16 @@ spec:
       # - image: ghcr.io/kedify/stable-diffusion-cpu
       - image: jkremser/stable-diffusion-cpu
         name: stable-diffusion-cpu
+        imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: shared-images
           mountPath: /app/results
+        env:
+        - name: AMQP_URL
+          valueFrom:
+            secretKeyRef:
+              name: stablediff-rabbitmq
+              key: host
       - image: minio/mc
         name: minio-sidecar
         env:
@@ -36,12 +43,6 @@ spec:
             secretKeyRef:
               name: minio
               key: rootPassword
-        - name: AMQP_URL
-          valueFrom:
-            secretKeyRef:
-              name: stablediff-rabbitmq
-              key: host
-
         command: ["/bin/sh", "-c"]
         args:
         - |

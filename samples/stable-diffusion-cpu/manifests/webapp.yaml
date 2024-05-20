@@ -20,6 +20,7 @@ spec:
       # - image: ghcr.io/kedify/stable-diffusion-webui
       - image: jkremser/stable-diffusion-webui
         name: stable-diffusion-webui
+        imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: shared-images
           mountPath: /app/public/generated
@@ -72,18 +73,13 @@ spec:
             secretKeyRef:
               name: minio
               key: rootPassword
-        - name: AMQP_URL
-          valueFrom:
-            secretKeyRef:
-              name: stablediff-rabbitmq
-              key: host
         command: ["/bin/sh", "-c"]
         args:
         - |
-          mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
-          mc admin info shared;
+          mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD
+          mc admin info shared
           echo "Minio configured, starting sync.."
-          mc mirror --watch --exclude *.json shared/images /images;
+          while true; do mc mirror --overwrite --exclude *.json shared/images /images; sleep 1; done
 
         volumeMounts:
         - name: shared-images
