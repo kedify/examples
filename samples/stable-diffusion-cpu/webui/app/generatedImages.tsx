@@ -21,7 +21,7 @@ export const GeneratedImages: React.FC<GeneratedImagesProps> = () => {
         >
           <Tooltip color="primary" content={
             <div className="bg-slate-900 p-4 rounded-md">
-              <div className="text-small font-bold mb-3">"{prompt}"</div>
+              <div className="text-small font-bold mb-3">&quot;{prompt}&quot;</div>
               <div className="text-tiny">Generated: {moment(generatedDate).fromNow()}</div>
               <div className="text-tiny">Model: {model}</div>
               <div className="text-tiny">LoraModel: {loraModel}</div>

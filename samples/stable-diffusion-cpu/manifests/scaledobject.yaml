@@ -14,7 +14,7 @@ metadata:
   name: stable-diff
 spec:
   scaleTargetRef:
-    name: stable-diffusion-cpu
+    name: stable-diffusion-worker
   pollingInterval: 10
   cooldownPeriod: 300
   minReplicaCount: 0

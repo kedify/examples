@@ -9,3 +9,6 @@
 
 # credentials
 /manifests/default_user.conf
+
+# vendir
+/.vendir-tmp-*

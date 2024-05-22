@@ -2,23 +2,23 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: stable-diffusion-cpu
-  name: stable-diffusion-cpu
+    app: stable-diffusion-worker
+  name: stable-diffusion-worker
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stable-diffusion-cpu
+      app: stable-diffusion-worker
   template:
     metadata:
       labels:
-        app: stable-diffusion-cpu
+        app: stable-diffusion-worker
       annotations:
-        kubectl.kubernetes.io/default-container: stable-diffusion-cpu
+        kubectl.kubernetes.io/default-container: stable-diffusion-worker
     spec:
       containers:
-      - image: ghcr.io/kedify/stable-diffusion-cpu
-        name: stable-diffusion-cpu
+      - image: ghcr.io/kedify/stable-diffusion-worker
+        name: stable-diffusion-worker
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: shared-images
@@ -62,7 +62,7 @@ spec:
               topologyKey: kubernetes.io/hostname
               labelSelector:
                 matchLabels:
-                  app: stable-diffusion-cpu
+                  app: stable-diffusion-worker
       volumes:
       - name: shared-images
         emptyDir: {}

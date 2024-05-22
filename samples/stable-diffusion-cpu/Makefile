@@ -1,17 +1,17 @@
 ###############################
 #		CONSTANTS
 ###############################
-IMAGE ?= ghcr.io/kedify/stable-diffusion-cpu
+WORKER_IMAGE ?= ghcr.io/kedify/stable-diffusion-worker
 WEBUI_IMAGE ?= ghcr.io/kedify/stable-diffusion-webui
 CLUSTER_NAME ?= stable-diff
 HACK_BIN ?= bin
 VENDIR := $(abspath $(HACK_BIN)/vendir)
 
 MINIO_USER := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 8)
-MINIO_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!\#$%' </dev/urandom | head -c 15)
+MINIO_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!$%' </dev/urandom | head -c 15)
 
 RABBITMQ_USER := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 8)
-RABBITMQ_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!\#$%' </dev/urandom | head -c 15)
+RABBITMQ_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!$%' </dev/urandom | head -c 15)
 
 PROMPT ?= yellow submarine
 NUM_IMAGES ?= 1
@@ -23,9 +23,9 @@ NUM_IMAGES ?= 1
 all: help
 
 .PHONY: build-stable-diff-image
-build-stable-diff-image: sync ## Builds the container image $(IMAGE).
-	@$(call say,Build container image $(IMAGE))
-	docker build . -t $(IMAGE)
+build-stable-diff-image: sync ## Builds the container image $(WORKER_IMAGE).
+	@$(call say,Build container image $(WORKER_IMAGE))
+	docker build . -t $(WORKER_IMAGE)
 
 .PHONY: build-webui-image
 build-webui-image: ## Builds the container image $(WEBUI_IMAGE).
@@ -34,8 +34,8 @@ build-webui-image: ## Builds the container image $(WEBUI_IMAGE).
 
 .PHONY: build-stable-diff-image-multiarch
 build-stable-diff-image-multiarch: sync
-	@$(call say,Build container image $(IMAGE))
-	docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 . -t $(IMAGE)
+	@$(call say,Build container image $(WORKER_IMAGE))
+	docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 . -t $(WORKER_IMAGE)
 
 .PHONY: build-webui-image-multiarch
 build-webui-image-multiarch:
@@ -43,16 +43,16 @@ build-webui-image-multiarch:
 	cd webui && docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 . -t $(WEBUI_IMAGE)
 
 .PHONY: build-multiarch-images
-build-multiarch-images: build-webui-image-multiarch build-stable-diff-image-multiarch  ## Builds the container image $(WEBUI_IMAGE) & $(IMAGE) for both platforms.
+build-multiarch-images: build-webui-image-multiarch build-stable-diff-image-multiarch  ## Builds the container image $(WEBUI_IMAGE) & $(WORKER_IMAGE) for both platforms.
 
 .PHONY: run
 run: ## Runs the built image.
-	docker run -ti $(IMAGE)
+	docker run -ti $(WORKER_IMAGE)
 
 .PHONY: run-example
 run-example: ## Runs the built image and creates an example image. Usage: PROMPT="dog" NUM_IMAGES=2 make run-example
 	@mkdir -p results
-	docker run -ti --volume $(PWD)/results:/app/results $(IMAGE) --prompt "$(PROMPT)" --number_of_images $(NUM_IMAGES)
+	docker run -ti --volume $(PWD)/results:/app/results $(WORKER_IMAGE) --prompt "$(PROMPT)" --number_of_images $(NUM_IMAGES)
 	@echo Done. Check the results directory.
 
 .PHONY: deploy-minio
@@ -72,7 +72,7 @@ deploy-app: ## Deploys the fastsdcpu deployment and webui.
 	kubectl apply -f manifests/app.yaml
 	kubectl apply -f manifests/webapp.yaml
 	kubectl wait --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
-	kubectl wait --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-cpu
+	kubectl wait --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
 	@echo the webapp should be available on http://localhost:8081
 
 .PHONY: deploy-kafka
@@ -118,7 +118,7 @@ cluster: ## Creates simple k3d cluster with ingress controller (traefik).
 .PHONY: import
 import: ## Import images to k3d cluster to speed up the container creation.
 	@$(call say,Import container images)
-	k3d image import $(IMAGE) -c $(CLUSTER_NAME)
+	k3d image import $(WORKER_IMAGE) -c $(CLUSTER_NAME)
 	k3d image import $(WEBUI_IMAGE) -c $(CLUSTER_NAME)
 
 .PHONY: run-webui-dev
@@ -141,6 +141,11 @@ $(VENDIR):
 .PHONY: help
 help: ## Show this help.
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-25s\033[0m %s\n", $$1, $$2}'
+
+
+###############################
+#		HELPERS
+###############################
 
 ifndef NO_COLOR
 YELLOW=\033[0;33m
