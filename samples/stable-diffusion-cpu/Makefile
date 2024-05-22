@@ -32,6 +32,19 @@ build-webui-image: ## Builds the container image $(WEBUI_IMAGE).
 	@$(call say,Build container image $(WEBUI_IMAGE))
 	cd webui && docker build . -t $(WEBUI_IMAGE)
 
+.PHONY: build-stable-diff-image-multiarch
+build-stable-diff-image-multiarch: sync
+	@$(call say,Build container image $(IMAGE))
+	docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 . -t $(IMAGE)
+
+.PHONY: build-webui-image-multiarch
+build-webui-image-multiarch:
+	@$(call say,Build container image $(WEBUI_IMAGE))
+	cd webui && docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 . -t $(WEBUI_IMAGE)
+
+.PHONY: build-multiarch-images
+build-multiarch-images: build-webui-image-multiarch build-stable-diff-image-multiarch  ## Builds the container image $(WEBUI_IMAGE) & $(IMAGE) for both platforms.
+
 .PHONY: run
 run: ## Runs the built image.
 	docker run -ti $(IMAGE)
@@ -108,6 +121,12 @@ import: ## Import images to k3d cluster to speed up the container creation.
 	k3d image import $(IMAGE) -c $(CLUSTER_NAME)
 	k3d image import $(WEBUI_IMAGE) -c $(CLUSTER_NAME)
 
+.PHONY: run-webui-dev
+run-webui-dev: $(VENDIR) ## Runs the webui locally.
+	@$(call say,Starting web ui)
+	(kubectl port-forward svc/rabbitmq-cluster -n rabbitmq-system 5672:5672 &)
+	bash -c "trap 'trap - SIGINT SIGTERM ERR; echo cleanup ; kill $(shell ps aux | grep '[k]ubectl port-forward' | awk '{ print $$2}') 2> /dev/null || true; exit 0' SIGINT SIGTERM ERR; cd webui && AMQP_URL=amqp://$(shell kubectl get secrets stablediff -n rabbitmq-system -o jsonpath={.data.username} | base64 --decode):$(shell kubectl get secrets stablediff -n rabbitmq-system -o jsonpath={.data.password} | base64 --decode)@localhost:5672 npm run dev"
+
 .PHONY: sync
 sync: $(VENDIR) ## Syncs the rupeshs/fastsdcpu the repo.
 	@$(call say,Sync upstream repo)
@@ -130,5 +149,5 @@ NC=\033[0m
 endif
 
 define say
-echo "\n$(shell echo "$1 " | tr '[:rune:]' '=')\n $(YELLOW)$1$(NC)\n$(shell echo "$1 " | tr '[:rune:]' '=')"
+echo -e "\n$(shell echo "$1  " | sed s/./=/g)\n $(YELLOW)$1$(NC)\n$(shell echo "$1  " | sed s/./=/g)"
 endef

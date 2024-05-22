@@ -20,6 +20,9 @@ spec:
       - image: ghcr.io/kedify/stable-diffusion-cpu
         name: stable-diffusion-cpu
         imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
         volumeMounts:
         - name: shared-images
           mountPath: /app/results
@@ -29,6 +32,8 @@ spec:
             secretKeyRef:
               name: stablediff-rabbitmq
               key: host
+        - name: DEVICE
+          value: GPU
       - image: minio/mc
         name: minio-sidecar
         env:

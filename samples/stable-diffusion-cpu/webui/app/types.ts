@@ -1,7 +1,11 @@
-export interface ImageProps {
+export interface GeneratedImage {
   id: number;
-  height: string;
-  width: string;
+  height: number;
+  width: number;
   url: string;
+  prompt: string;
+  model: string;
+  loraModel: string;
+  generatedDate: Date;
   // blurDataUrl?: string;
 }
