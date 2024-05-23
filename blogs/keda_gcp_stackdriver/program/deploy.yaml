@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    iam.gke.io/gcp-service-account: stackdriver-web-server@PROJECT_ID.iam.gserviceaccount.com
+  name: web-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-server
+  labels:
+    app: web-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-server
+  template:
+    metadata:
+      labels:
+        app: web-server
+    spec:
+      serviceAccountName: web-server
+      containers:
+        - name: web-server
+          image: sharadregoti/web-server:v0.1.0
+          ports:
+            - containerPort: 1323
+          resources:
+            requests:
+              memory: "25Mi"
+              cpu: "50m"
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+          env:
+            - name: REQUEST_THRESHOLD
+              value: "50"
+            - name: REQUEST_DELAY_TIME
+              value: "1"
+            - name: PROJECT_ID
+              value: "PROJECT_ID"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 1323
+      targetPort: 1323
+      protocol: TCP
+  selector:
+    app: web-server
