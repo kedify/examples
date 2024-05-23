@@ -23,6 +23,9 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: "1"
+          requests:
+            cpu: 500m
+            memory: 1Gi
         volumeMounts:
         - name: shared-images
           mountPath: /app/results
@@ -47,6 +50,10 @@ spec:
             secretKeyRef:
               name: minio
               key: rootPassword
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
         command: ["/bin/sh", "-c"]
         args:
         - |

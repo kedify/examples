@@ -66,7 +66,7 @@ gcloud beta container --project "kedify-initial" clusters create "use-cases" \
    --max-surge-upgrade 1 \
    --max-unavailable-upgrade 0 \
    --binauthz-evaluation-mode=DISABLED \
-   --enable-managed-prometheus \
+   --no-enable-managed-prometheus \
    --node-locations "us-east4-a"
 
   # https://cloud.google.com/kubernetes-engine/docs/how-to/gpus#create-gpu-pool-auto-drivers
@@ -128,6 +128,9 @@ gcloud beta container clusters create use-cases-single-node \
   --logging=SYSTEM,WORKLOAD \
   --monitoring=SYSTEM \
   --enable-ip-alias \
+  --security-posture=disabled \
+  --workload-vulnerability-scanning=disabled \
+  --no-enable-managed-prometheus \
   --no-enable-intra-node-visibility \
   --default-max-pods-per-node "110" \
   --no-enable-master-authorized-networks \

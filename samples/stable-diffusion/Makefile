@@ -78,7 +78,7 @@ deploy-app: ## Deploys the fastsdcpu deployment and webui.
 	kubectl wait -nstable-diff --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
 	kubectl wait -nstable-diff --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
 	@$(call say,Exposing..)
-	@echo the webapp should be available on http://$(shell kubectl get ing -n stable-diff stable-diffusion-webui -ojson | jq -r '.status.loadBalancer.ingress[0].ip')
+	@echo the webapp should be available on http://$(shell echo $(shell kubectl get ing -n stable-diff stable-diffusion-webui -ojson | jq -r '.status.loadBalancer.ingress[0].ip'))
 	@echo -------------------------------------------------------
 
 .PHONY: deploy-kafka
