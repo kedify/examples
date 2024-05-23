@@ -15,6 +15,7 @@ RABBITMQ_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!$%' </dev/urando
 
 PROMPT ?= yellow submarine
 NUM_IMAGES ?= 1
+GPU ?= -gpu
 
 
 ###############################
@@ -58,10 +59,12 @@ run-example: ## Runs the built image and creates an example image. Usage: PROMPT
 .PHONY: deploy-minio
 deploy-minio: ## Deploys minio into current Kubernetes context.
 	@$(call say,Deploy Minio)
+	@$(call createNs,stable-diff)
 	helm repo add minio https://charts.min.io/
 	@helm upgrade -i \
 	minio minio/minio \
 	--wait \
+	-nstable-diff \
 	--timeout=2m \
 	-f minio-values.yaml \
 	--set rootUser=$(MINIO_USER),rootPassword=$(MINIO_PASSWORD)
@@ -69,16 +72,19 @@ deploy-minio: ## Deploys minio into current Kubernetes context.
 .PHONY: deploy-app
 deploy-app: ## Deploys the fastsdcpu deployment and webui.
 	@$(call say,Deploy stable diffusion app)
-	kubectl apply -nstable-diff -f manifests/app.yaml
+	@$(call createNs,stable-diff)
+	kubectl apply -nstable-diff -f manifests/app$(GPU).yaml
 	kubectl apply -nstable-diff -f manifests/webapp.yaml
-	kubectl wait --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
-	kubectl wait --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
-	@echo the webapp should be available on http://localhost:8081
+	kubectl wait -nstable-diff --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
+	kubectl wait -nstable-diff --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
+	@$(call say,Exposing..)
+	@echo the webapp should be available on http://$(shell kubectl get ing -n stable-diff stable-diffusion-webui -ojson | jq -r '.status.loadBalancer.ingress[0].ip')
+	@echo -------------------------------------------------------
 
 .PHONY: deploy-kafka
 deploy-kafka: ## Deploys the strimzi operator and creates a kafka cluster with a single topic.
 	@$(call say,Deploy Kafka)
-	@kubectl create namespace kafka --dry-run=client -o yaml | kubectl apply -f -
+	@$(call createNs,kafka)
 	kubectl apply -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
 	kubectl wait --timeout=90s -nkafka --for=condition=ready pod -lname=strimzi-cluster-operator
 	kubectl apply -f manifests/kafka.yaml
@@ -88,7 +94,8 @@ deploy-kafka: ## Deploys the strimzi operator and creates a kafka cluster with a
 .PHONY: deploy-rabbitmq
 deploy-rabbitmq: ## Deploys rabbitmq.
 	@$(call say,Deploy RabbitMQ)
-	@kubectl create namespace rabbitmq-system --dry-run=client -o yaml | kubectl apply -f -
+	@$(call createNs,rabbitmq-system)
+	@$(call createNs,stable-diff)
 	kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml
 	kubectl wait --timeout=90s -nrabbitmq-system --for=condition=ready pod -lapp.kubernetes.io/name=rabbitmq-cluster-operator
 	@cat manifests/default_user.conf.tmpl | RABBITMQ_USER=$(RABBITMQ_USER) RABBITMQ_PASSWORD=$(RABBITMQ_PASSWORD) envsubst > manifests/default_user.conf
@@ -106,6 +113,15 @@ deploy-scaledobject: ## Deploys KEDA scaledobject.
 .PHONY: deploy
 deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio and sample application.
 	@$(call say,Deploy everything)
+	@echo Done.
+
+.PHONY: undeploy
+undeploy:
+	@$(call say,Undeploying the use-case)
+	kubectl delete -nrabbitmq-system rabbitmqcluster rabbitmq-cluster
+	helm uninstall minio -nstable-diff
+	kubectl delete ns stable-diff
+	kubectl delete ns rabbitmq-system
 
 .PHONY: deploy-from-scratch
 deploy-from-scratch: cluster import deploy ## Prepares also k3s cluster and deploys everything on it.
@@ -154,5 +170,9 @@ NC=\033[0m
 endif
 
 define say
-echo -e "\n$(shell echo "$1  " | sed s/./=/g)\n $(YELLOW)$1$(NC)\n$(shell echo "$1  " | sed s/./=/g)"
+echo "\n$(shell echo "$1  " | sed s/./=/g)\n $(YELLOW)$1$(NC)\n$(shell echo "$1  " | sed s/./=/g)"
+endef
+
+define createNs
+@kubectl create namespace $1 --dry-run=client -o yaml | kubectl apply -f -
 endef

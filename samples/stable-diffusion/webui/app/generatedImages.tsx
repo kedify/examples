@@ -29,7 +29,7 @@ export const GeneratedImages: React.FC<GeneratedImagesProps> = () => {
             </div>
           } delay={500}>
             <Image id={id.toString()}
-              alt="Next.js Conf photo"
+              alt={`Generated '${prompt}'`}
               className="ml-5 transform rounded-lg brightness-90 transition will-change-auto group-hover:brightness-110"
               style={{ transform: "translate3d(0, 0, 0)" }}
               placeholder="blur"
