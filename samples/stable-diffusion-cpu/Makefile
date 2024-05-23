@@ -69,8 +69,8 @@ deploy-minio: ## Deploys minio into current Kubernetes context.
 .PHONY: deploy-app
 deploy-app: ## Deploys the fastsdcpu deployment and webui.
 	@$(call say,Deploy stable diffusion app)
-	kubectl apply -f manifests/app.yaml
-	kubectl apply -f manifests/webapp.yaml
+	kubectl apply -nstable-diff -f manifests/app.yaml
+	kubectl apply -nstable-diff -f manifests/webapp.yaml
 	kubectl wait --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
 	kubectl wait --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
 	@echo the webapp should be available on http://localhost:8081
@@ -93,7 +93,7 @@ deploy-rabbitmq: ## Deploys rabbitmq.
 	kubectl wait --timeout=90s -nrabbitmq-system --for=condition=ready pod -lapp.kubernetes.io/name=rabbitmq-cluster-operator
 	@cat manifests/default_user.conf.tmpl | RABBITMQ_USER=$(RABBITMQ_USER) RABBITMQ_PASSWORD=$(RABBITMQ_PASSWORD) envsubst > manifests/default_user.conf
 	@kubectl create secret generic stablediff -nrabbitmq-system --from-file=manifests/default_user.conf --from-literal password=$(RABBITMQ_PASSWORD) --from-literal username=$(RABBITMQ_USER) --dry-run=client -o yaml | kubectl apply -f -
-	@kubectl create secret generic stablediff-rabbitmq --from-literal host=amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@rabbitmq-cluster.rabbitmq-system.svc.cluster.local:5672 --dry-run=client -o yaml | kubectl apply -f -
+	@kubectl create secret generic stablediff-rabbitmq -nstable-diff --from-literal host=amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@rabbitmq-cluster.rabbitmq-system.svc.cluster.local:5672 --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f manifests/rabbitmq.yaml
 	kubectl wait --timeout=90s -nrabbitmq-system --for=condition=established crd/rabbitmqclusters.rabbitmq.com
 	@while ! kubectl wait --timeout=90s -nrabbitmq-system --for=condition=ready pod -lapp.kubernetes.io/name=rabbitmq-cluster; do "echo waiting for rabbitmq.."; sleep 1; done
@@ -101,7 +101,7 @@ deploy-rabbitmq: ## Deploys rabbitmq.
 .PHONY: deploy-scaledobject
 deploy-scaledobject: ## Deploys KEDA scaledobject.
 	@$(call say,Deploy KEDA scaledobject)
-	kubectl apply -f manifests/scaledobject.yaml
+	kubectl apply -nstable-diff -f manifests/scaledobject.yaml
 
 .PHONY: deploy
 deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio and sample application.

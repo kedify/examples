@@ -6,6 +6,7 @@ import { GeneratedImage } from '../types';
 
 export async function getAvailableImages(): Promise<GeneratedImage[]> {
   const cwd = process.cwd();
+  const imageLimit = 20;
   const images = (await fs.readdir(`${cwd}/public/generated`))
     .filter(path => path.endsWith('.png'))
     .map(async (path, index) => {
@@ -29,7 +30,7 @@ export async function getAvailableImages(): Promise<GeneratedImage[]> {
         generatedDate: generatedDate,
       } satisfies GeneratedImage
     });
-  return (await Promise.all(images)).toSorted((a, b) => +b.generatedDate - +b.generatedDate)
+  return (await Promise.all(images)).toSorted((a, b) => +b.generatedDate - +a.generatedDate).slice(0, imageLimit)
 }
 
 export async function sendToQueue(img: string) {
