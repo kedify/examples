@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: stable-diffusion-worker
+  name: stable-diffusion-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stable-diffusion-worker
+  template:
+    metadata:
+      labels:
+        app: stable-diffusion-worker
+      annotations:
+        kubectl.kubernetes.io/default-container: stable-diffusion-worker
+    spec:
+      containers:
+      - image: ghcr.io/kedify/stable-diffusion-worker
+        name: stable-diffusion-worker
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: shared-images
+          mountPath: /app/results
+        env:
+        - name: AMQP_URL
+          valueFrom:
+            secretKeyRef:
+              name: stablediff-rabbitmq
+              key: host
+        resources:
+          requests:
+            cpu: "1"
+            memory: 1Gi
+      - image: minio/mc
+        name: minio-sidecar
+        env:
+        - name: MINIO_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: rootUser
+        - name: MINIO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: rootPassword
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
+          mc admin info shared;
+          echo "Minio configured, starting sync.."
+          mc mirror --watch /images shared/images;
+
+        volumeMounts:
+        - name: shared-images
+          mountPath: /images
+      # if possible, spread the pods across all schedulable nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: stable-diffusion-worker
+      volumes:
+      - name: shared-images
+        emptyDir: {}

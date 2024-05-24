@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: stable-diffusion-webui
+  name: stable-diffusion-webui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stable-diffusion-webui
+  template:
+    metadata:
+      labels:
+        app: stable-diffusion-webui
+      annotations:
+        kubectl.kubernetes.io/default-container: stable-diffusion-webui
+    spec:
+      containers:
+      - image: ghcr.io/kedify/stable-diffusion-webui
+        name: stable-diffusion-webui
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: shared-images
+          mountPath: /app/public/generated
+        env:
+        - name: "REACT_APP_ENVIRONMENT"
+          value: "PROD"
+        - name: AMQP_URL
+          valueFrom:
+            secretKeyRef:
+              name: stablediff-rabbitmq
+              key: host
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+          initialDelaySeconds: 60
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 3000
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+          initialDelaySeconds: 30
+        ports:
+          - name: http
+            containerPort: 3000
+            protocol: TCP
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+      - image: minio/mc
+        name: minio-sidecar
+        env:
+        - name: MINIO_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: rootUser
+        - name: MINIO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: minio
+              key: rootPassword
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD
+          mc admin info shared
+          echo "Minio configured, starting sync.."
+          while true; do mc mirror --overwrite shared/images /images; sleep 1; done
+
+        volumeMounts:
+        - name: shared-images
+          mountPath: /images
+      volumes:
+      - name: shared-images
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stable-diffusion-webui
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: stable-diffusion-webui
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stable-diffusion-webui
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stable-diffusion-webui
+            port:
+              number: 80
