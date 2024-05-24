@@ -110,6 +110,11 @@ deploy-scaledobject: ## Deploys KEDA scaledobject.
 	@$(call say,Deploy KEDA scaledobject)
 	kubectl apply -nstable-diff -f manifests/scaledobject.yaml
 
+.PHONY: deploy-scaledjob
+deploy-scaledjob: ## Deploys KEDA scaledjob.
+	@$(call say,Deploy KEDA scaledjob)
+	kubectl apply -nstable-diff -f manifests/scaledjob.yaml
+
 .PHONY: deploy
 deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio and sample application.
 	@$(call say,Deploy everything)

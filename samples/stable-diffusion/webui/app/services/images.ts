@@ -2,7 +2,7 @@
 
 import { promises as fs } from 'fs';
 import amqplib from 'amqplib';
-import { GeneratedImage } from '../types';
+import { GeneratedImage, JobRequest } from '../types';
 
 export async function getAvailableImages(): Promise<GeneratedImage[]> {
   const cwd = process.cwd();
@@ -33,9 +33,9 @@ export async function getAvailableImages(): Promise<GeneratedImage[]> {
   return (await Promise.all(images)).toSorted((a, b) => +b.generatedDate - +a.generatedDate).slice(0, imageLimit)
 }
 
-export async function sendToQueue(img: string) {
+export async function sendToQueue(prompt: string, count = 1) {
   const queue = 'tasks';
-  console.log(`sending ${img} to ${queue}`)
+  console.log(`sending request for ${count} '${prompt}' to ${queue}`)
   const conn = await amqplib.connect(`${process.env.AMQP_URL}`);
   const channel = await conn.createChannel();
 
@@ -43,5 +43,9 @@ export async function sendToQueue(img: string) {
   channel.assertQueue(queue, {
     durable: false,
   });
-  channel.sendToQueue(queue, Buffer.from(img));
+  const msg = {
+    prompt: prompt,
+    count: count,
+  } satisfies JobRequest
+  channel.sendToQueue(queue, Buffer.from(JSON.stringify(msg)));
 }

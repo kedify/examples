@@ -27,11 +27,12 @@ spec:
         scaleDown:
           stabilizationWindowSeconds: 15
   triggers:
+    # https://keda.sh/docs/2.14/scalers/rabbitmq-queue/
     - type: rabbitmq
       metadata:
         protocol: amqp
         queueName: tasks
-        mode: QueueLength
+        mode: QueueLength # QueueLength or MessageRate
         value: "1"
         activationValue: "0"
       authenticationRef:

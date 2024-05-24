@@ -38,6 +38,8 @@ spec:
               key: host
         - name: DEVICE
           value: GPU
+        - name: EXIT_AFTER_ONE_TASK
+          value: "1"
       - image: minio/mc
         name: minio-sidecar
         env:

@@ -21,7 +21,9 @@ reQueue() {
 }
 
 generate() {
-  python /app/src/app.py --prompt "\"${1}\""
+  _prompt=$(echo ${_imageRequest} | jq '.prompt')
+  _count=$(echo ${_imageRequest} | jq 2> /dev/null '.count // 1')
+  python /app/src/app.py --number_of_images "${_count}" --prompt "\"${_prompt}\""
   echo "Done. Image for ${_imageRequest} has been stored in /app/results."
   sleep 1
 }
@@ -37,6 +39,7 @@ main() {
     fi
     echo "Task received, generating: \"${_imageRequest}\""
     generate "${_imageRequest}"
+    [ "${EXIT_AFTER_ONE_TASK}" = "1" ] && exit 0
   done
 }
 

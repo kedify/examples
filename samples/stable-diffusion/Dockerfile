@@ -21,7 +21,7 @@ COPY --chown=65532:65532 requirements.txt .
 RUN pip --no-cache-dir install torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu && \
     pip --no-cache-dir install -r requirements.txt --user && \
     apt-get update && \
-    apt-get install -y amqp-tools && \
+    apt-get install -y amqp-tools jq && \
     rm -rf /var/lib/apt/lists/*
 
 # download models

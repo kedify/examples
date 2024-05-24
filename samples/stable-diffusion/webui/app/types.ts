@@ -9,3 +9,8 @@ export interface GeneratedImage {
   generatedDate: Date;
   // blurDataUrl?: string;
 }
+
+export interface JobRequest {
+  prompt: string;
+  count: number;
+}
