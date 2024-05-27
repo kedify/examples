@@ -9,14 +9,14 @@ spec:
       key: host
 ---
 apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
+kind: ScaledJob
 metadata:
-  name: stable-diff
+  name: stable-diff-job
 spec:
   jobTargetRef:
     template:
       spec:
-       containers:
+        containers:
         - image: ghcr.io/kedify/stable-diffusion-worker
           name: stable-diffusion-worker
           imagePullPolicy: IfNotPresent
@@ -60,25 +60,27 @@ spec:
           - |
             mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
             mc admin info shared;
-            echo "Minio configured, starting sync.."
-            mc mirror --watch /images shared/images;
+            echo "Minio configured, waiting for the result.."
+            until [ -f /images/*.png ] && [ -f /images/*.json ]; do sleep 1; printf .; done
+            echo -e "\nResults have been found: \n$(ls /images)\nSyncing.."
+            mc mirror /images shared/images;
 
           volumeMounts:
           - name: shared-images
             mountPath: /images
-      # if possible, spread the pods across all schedulable nodes
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app: stable-diffusion-worker
-      volumes:
-      - name: shared-images
-        emptyDir: {}
+        # if possible, spread the pods across all schedulable nodes
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: stable-diffusion-worker
+        volumes:
+        - name: shared-images
+          emptyDir: {}
     backoffLimit: 4  
   pollingInterval: 10
   maxReplicaCount: 8
