@@ -2,8 +2,7 @@
 
 
 import Image from "next/image";
-import Link from "next/link";
-import { getAvailableImages, sendToQueue } from "./services/images";
+import { sendToQueue } from "./services/images";
 import { Prompt } from "./prompt";
 import { GeneratedImages } from "./generatedImages";
 
