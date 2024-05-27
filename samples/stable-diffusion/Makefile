@@ -70,13 +70,12 @@ deploy-minio: ## Deploys minio into current Kubernetes context.
 	--set rootUser=$(MINIO_USER),rootPassword=$(MINIO_PASSWORD)
 
 .PHONY: deploy-app
-deploy-app: ## Deploys the fastsdcpu deployment and webui.
+deploy-app: ## Deploys the webui.
 	@$(call say,Deploy stable diffusion app)
 	@$(call createNs,stable-diff)
-	kubectl apply -nstable-diff -f manifests/app$(GPU).yaml
 	kubectl apply -nstable-diff -f manifests/webapp.yaml
 	kubectl wait -nstable-diff --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
-	kubectl wait -nstable-diff --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
+
 	@$(call say,Exposing..)
 	@echo the webapp should be available on http://$(shell echo $(shell kubectl get ing -n stable-diff stable-diffusion-webui -ojson | jq -r '.status.loadBalancer.ingress[0].ip'))
 	@echo -------------------------------------------------------
@@ -108,25 +107,29 @@ deploy-rabbitmq: ## Deploys rabbitmq.
 .PHONY: deploy-scaledobject
 deploy-scaledobject: ## Deploys KEDA scaledobject.
 	@$(call say,Deploy KEDA scaledobject)
+	-kubectl delete -nstable-diff -f manifests/scaledjob.yaml
+	kubectl apply -nstable-diff -f manifests/app$(GPU).yaml
+	kubectl wait -nstable-diff --timeout=600s --for=condition=ready pod -lapp=stable-diffusion-worker
 	kubectl apply -nstable-diff -f manifests/scaledobject.yaml
 
 .PHONY: deploy-scaledjob
 deploy-scaledjob: ## Deploys KEDA scaledjob.
 	@$(call say,Deploy KEDA scaledjob)
+	-kubectl delete -nstable-diff -f manifests/scaledobject.yaml
 	kubectl apply -nstable-diff -f manifests/scaledjob.yaml
 
 .PHONY: deploy
-deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio and sample application.
-	@$(call say,Deploy everything)
-	@echo Done.
+deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio, RabbitMQ and the web ui.
+	@$(call say,Deploy the required infrastructure)
+	@echo Done. Continue with either make deploy-scaledjob XOR make deploy-scaledobject.
 
 .PHONY: undeploy
 undeploy:
 	@$(call say,Undeploying the use-case)
-	kubectl delete -nrabbitmq-system rabbitmqcluster rabbitmq-cluster
-	helm uninstall minio -nstable-diff
-	kubectl delete ns stable-diff
-	kubectl delete ns rabbitmq-system
+	-kubectl delete -nrabbitmq-system rabbitmqcluster rabbitmq-cluster
+	-helm uninstall minio -nstable-diff
+	-kubectl delete ns stable-diff
+	-kubectl delete ns rabbitmq-system
 
 .PHONY: deploy-from-scratch
 deploy-from-scratch: cluster import deploy ## Prepares also k3s cluster and deploys everything on it.

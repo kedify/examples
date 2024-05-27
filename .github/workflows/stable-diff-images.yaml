@@ -5,7 +5,15 @@ on:
       - main
     paths-ignore:
       - '**.md'
-
+      - '!samples/stable-diffusion/**'
+      - '!.github/**'
+  workflow_dispatch:
+    inputs:
+      imageTag:
+        description: "container image tag"
+        required: false
+        default: latest
+        type: string
   workflow_call:
     inputs:
       imageTag:
@@ -37,7 +45,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: kedify
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU

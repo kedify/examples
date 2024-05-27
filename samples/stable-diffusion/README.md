@@ -3,11 +3,19 @@
 ![diagram](./demo.png "Diagram")
 https://excalidraw.com/#json=p1f9nzyFye_sOgnV9AmIL,69oUi00h3HKXnsyzUReA5g
 
-### try the container image locally
+### Try the container image locally
 
 ```
 make build-image
 PROMPT="cartoon dwarf" NUM_IMAGES=7 make run-example
+```
+
+### Try the local k8s setup
+
+This requires `k3d` binary to be present on the `$PATH` and also the GPU support is turned off.
+
+```
+GPU="" make deploy-from-scratch
 ```
 
 ### Deploy to K8s
@@ -16,7 +24,28 @@ PROMPT="cartoon dwarf" NUM_IMAGES=7 make run-example
 make deploy
 ```
 
-This deploys one replica of web ui, Minio, RabbitMQ and one replica of worker deployment that can generate the images.
+This deploys Minio, RabbitMQ and web ui that can send request for image generation to the job queue.
+
+From now you can continue either with a `scaledobject` approach or with `scaledjob` approach.
+
+#### Deploy scaledjob or scaledobject
+
+```
+make deploy-scaledjob
+```
+
+XOR
+
+```
+make deploy-scaledobject
+```
+
+When using the `scaledjob` approach, the new kubernetes jobs are being created if the message queue is not empty and each job can process exactly one request from
+the job queue. Once it generates the image, its side-car container with minio will sync the result (image and metadata file) to a shared filesystem and pod with job is terminated.
+
+On the other hand, with scaledobject approach, normal Kubernetes deployment is being used for worker pods and these run the infinite loop where they process one job request
+after another. The deployment is still subject of KEDA autoscaling so if there are no more pending messages in the job queue, the deployment is scaled to min replicas (`0`).
+
 
 ## Common Pain Points
 
@@ -26,14 +55,18 @@ Reasons:
 - the models are too large (~4 gigs)
 - python
 
-Mitigations:
+Mitigation:
 - pre-fetch or even bake the container images on a newly spawned k8s nodes
 
 ### GPUs being too expensive
 - https://cloud.google.com/spot-vms/pricing#gpu_pricing
 
+Mitigation:
+- use node pool that can scale the number of GPU enabled nodes to zero replicas. This on the other hand ends up with significant delay if there are no GPU enabled k8s nodes and user
+is waiting for their creation (installation of nvidia drivers).
 
-### GKE Setup
+
+### Example GKE Setup
 
 #### two-nodes conventional k8s cluster with a GPU based elastic node pool
 
@@ -146,7 +179,14 @@ gcloud container clusters update use-cases-single-node \
 
 # login
 gcloud container clusters get-credentials use-cases-single-node --zone us-east4-a --project kedify-initial
+```
 
+
+## Non GCP environments or bare-metal K8s clusters
+
+In case the nvidia drivers are not being managed by the cloud provider, one has to install the GPU operator:
+
+```
 kubectl create ns gpu-operator
 kubectl label --overwrite ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 cat <<EOF | kubectl apply -f -
