@@ -71,6 +71,9 @@ jobs:
       
       - name: Install Syft
         uses: anchore/sbom-action@v0
+        with:
+          format: 'spdx-json'
+          output-file: ${{ matrix.makefileTarget }}-${{ github.run_number }}-${{ github.run_attempt }}-'sbom.spdx.json'
 
       - name: Build and push
         env:
