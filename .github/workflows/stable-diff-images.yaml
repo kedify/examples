@@ -21,7 +21,9 @@ on:
         required: false
         default: latest
         type: string
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 env:
   CONTAINER_IMG_REGISTRY: ghcr.io
   CONTAINER_IMG_ORG: kedify
@@ -32,11 +34,15 @@ env:
 jobs:
   build-container:
     permissions:
-      contents: write # for creation of releases
+      contents: write
       packages: write # push images
       id-token: write # needed for signing the images with GitHub OIDC Token
     name: build container
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        makefileTarget: [build-webui-image-multiarch, build-stable-diff-image-multiarch]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,4 +72,4 @@ jobs:
           WEBUI_IMAGE: "${{ env.CONTAINER_IMG_REGISTRY }}/${{ env.CONTAINER_IMG_ORG }}/${{ env.CONTAINER_IMG_WEBUI_NAME }}:${{ env.CONTAINER_IMG_TAG }}"
         run: |
           cd samples/stable-diffusion/
-          make build-multiarch-images
+          make ${{ matrix.makefileTarget }}
