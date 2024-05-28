@@ -66,15 +66,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3
-      
-      - name: Install Syft
-        uses: anchore/sbom-action@v0
-        with:
-          format: 'spdx-json'
-          output-file: ${{ matrix.makefileTarget }}-${{ github.run_number }}-${{ github.run_attempt }}-'sbom.spdx.json'
-
       - name: Build and push
         env:
           WORKER_IMAGE: "${{ env.CONTAINER_IMG_REGISTRY }}/${{ env.CONTAINER_IMG_ORG }}/${{ env.CONTAINER_IMG_WORKER_NAME }}:${{ env.CONTAINER_IMG_TAG }}"
