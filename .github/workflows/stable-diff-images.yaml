@@ -1,12 +1,5 @@
 name: Build and push images for stable diffusion use-case
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '!samples/stable-diffusion/**'
-      - '!.github/**'
   workflow_dispatch:
     inputs:
       imageTag:
