@@ -30,10 +30,10 @@ export const Prompt: React.FC<PromptProps> = ({ sendToQ }) => {
     <div className="flex flex-col gap-5">
       <div className="flex items-left">
         <div className="pt-5 mr-2">Prompt:</div>
-        <input className="backdrop-blur-2xl dark:from-inherit static w-auto rounded-xl border bg-gray-100 p-4 dark:bg-zinc-800/30 prompt"
+        <input className="backdrop-blur-2xl from-inherit static w-auto rounded-xl border bg-gray-100 p-4 bg-zinc-800/30 prompt"
             name="prompt" placeholder='Yellow submarine' value={prompt} onChange={e => setPrompt(e.target.value)}>
         </input>
-        <button className="ml-5 bg-transparent border border-slate-200 rounded-xl dark:border-slate-700 dark:text-slate-100 p-4 generate" onClick={generateOnClick}>Generate</button>
+        <button className="ml-5 bg-transparent border border-slate-200 rounded-xl border-slate-700 text-slate-100 p-4 generate" onClick={generateOnClick}>Generate</button>
         <ToastContainer 
           position="top-right"
           autoClose={7000}
