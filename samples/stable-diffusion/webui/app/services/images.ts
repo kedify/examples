@@ -14,7 +14,7 @@ export async function getAvailableImages(): Promise<GeneratedImage[]> {
       const metadataFile = await fs.readFile(`${cwd}/public/generated/${name}.json`, 'utf8');
       const metadata = JSON.parse(metadataFile);
       const model: string = metadata ? metadata['lcm_model_id'] : 'unknown';
-      const prompt: string = metadata ? metadata['prompt'] : 'unknown';
+      const prompt: string = metadata ? metadata['prompt'].replace(/['"]+/g, '') : 'unknown';
       const loraModel: string = metadata ? metadata['lcm_lora'] ? metadata['lcm_lora']['base_model_id'] : 'unknown' : 'unknown';
       const width = metadata ? metadata['image_width'] : 512;
       const height = metadata ? metadata['image_height'] : 512;

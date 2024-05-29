@@ -6,6 +6,7 @@
 
 # results
 /results/*
+/webui/public/generated
 
 # credentials
 /manifests/default_user.conf
