@@ -53,7 +53,7 @@ const Home = async () => {
           </a>
           <div className="mt-1">
             {/* todo replace w/ correct url once the pr gets merged */}
-            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://pr-367.dashboard-preview.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/summary" target="_blank">check the dashboard</a>
+            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://dashboard.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/scaledobjects/stable-diff/stable-diff-app" target="_blank">check the dashboard</a>
           </div>
         </div>
       </div>
