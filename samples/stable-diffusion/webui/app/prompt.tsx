@@ -30,10 +30,10 @@ export const Prompt: React.FC<PromptProps> = ({ sendToQ }) => {
     <div className="flex flex-col gap-5">
       <div className="flex items-left">
         <div className="pt-5 mr-2">Prompt:</div>
-        <input className="backdrop-blur-2xl from-inherit static w-auto rounded-xl border bg-gray-100 p-4 bg-zinc-800/30 prompt"
+        <input className="backdrop-blur-2xl from-inherit static max-w-36 sm:w-auto sm:max-w-none rounded-xl border bg-gray-100 sm:pr-4 sm:pl-4 p-2 pt-4 pb-4 bg-zinc-800/30 prompt"
             name="prompt" placeholder='Yellow submarine' value={prompt} onChange={e => setPrompt(e.target.value)}>
         </input>
-        <button className="ml-5 bg-transparent border border-slate-200 rounded-xl border-slate-700 text-slate-100 p-4 generate" onClick={generateOnClick}>Generate</button>
+        <button className="sm:ml-5 ml-2 bg-transparent border border-slate-200 rounded-xl border-slate-700 text-slate-100 sm:pr-4 sm:pl-4 p-2 pt-4 pb-4 generate" onClick={generateOnClick}>Generate</button>
         <ToastContainer 
           position="top-right"
           autoClose={7000}
@@ -48,7 +48,7 @@ export const Prompt: React.FC<PromptProps> = ({ sendToQ }) => {
           transition={Flip}
         />
       </div>
-      Number of images: {count} <input type="range" max="4" min="1" value={count} onChange={e => setCount(+e.target.value)} className="text-slate-100"/>
+      Number of images: {count} <input type="range" max="4" min="1" value={count} onChange={e => setCount(+e.target.value)} className="text-slate-100 max-w-80 sm:w-auto sm:max-w-none"/>
     </div>
   )
 }

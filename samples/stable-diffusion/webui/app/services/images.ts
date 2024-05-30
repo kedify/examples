@@ -6,7 +6,7 @@ import { GeneratedImage, JobRequest } from '../types';
 
 export async function getAvailableImages(): Promise<GeneratedImage[]> {
   const cwd = process.cwd();
-  const imageLimit = 20;
+  const imageLimit = 24; // 2*12, 3*8, 4*6 .. grid
   const images = (await fs.readdir(`${cwd}/public/generated`))
     .filter(path => path.endsWith('.png'))
     .map(async (path, index) => {
