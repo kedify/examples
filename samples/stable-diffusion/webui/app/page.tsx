@@ -13,7 +13,7 @@ const Home = async () => {
       className="relative flex w-full flex-wrap items-center justify-between bg-zinc-50 py-2 shadow-dark-mild dark:bg-neutral-800 lg:py-2">
       <div className="flex w-full flex-wrap items-center justify-between px-3">
         <div className="ms-2">
-          <a className="text-xl text-sky-400 " href="https://github.com/kedify/examples/tree/main/samples/stable-diffusion" target="_blank">Autoscaled Stable Diffusion</a> <span className="sm:text-sky-200 hidden sm:inline-block">(application deployed in Kubenetes utilizing KEDA for autoscaling the load)</span>
+          <a className="text-xl text-sky-400 " href="https://github.com/kedify/examples/tree/main/samples/stable-diffusion" target="_blank">Stable Diffusion</a> <span className="sm:text-sky-200 hidden sm:inline-block">This AI Model is autoscaled using Kubernetes Event-Driven Austoscaling (KEDA) powered by Kedify</span>
         </div>
           <a
             href="https://github.com/kedify/examples/tree/main/samples/stable-diffusion"
@@ -52,8 +52,7 @@ const Home = async () => {
             </div>
           </a>
           <div className="mt-1">
-            {/* todo replace w/ correct url once the pr gets merged */}
-            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://pr-367.dashboard-preview.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/summary" target="_blank">check the dashboard</a>
+            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://dashboard.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/scaledobjects/stable-diff/stable-diff-app" target="_blank">See Demo Dashboard &amp; Metrics</a>
           </div>
         </div>
       </div>
