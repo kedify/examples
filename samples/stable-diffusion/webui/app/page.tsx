@@ -8,6 +8,29 @@ import { GeneratedImages } from "./generatedImages";
 
 const Home = async () => {  
   return (
+    <>
+    <nav
+      className="relative flex w-full flex-wrap items-center justify-between bg-zinc-50 py-2 shadow-dark-mild dark:bg-neutral-800 lg:py-2">
+      <div className="flex w-full flex-wrap items-center justify-between px-3">
+        <div className="ms-2">
+          <a className="text-xl text-sky-400 " href="https://github.com/kedify/examples/tree/main/samples/stable-diffusion" target="_blank">Autoscaled Stable Diffusion</a> <span className="sm:text-sky-200 hidden sm:inline-block">(application deployed in Kubenetes utilizing KEDA for autoscaling the load)</span>
+        </div>
+          <a
+            href="https://github.com/kedify/examples/tree/main/samples/stable-diffusion"
+            target="_blank"
+          >
+          <Image
+            className="ml-auto invert"
+            src="/github-mark.svg"
+            alt="GH repo"
+            width={30}
+            height={30}
+            priority
+          />
+        </a>
+      </div>
+    </nav>
+
     <main className="flex min-h-screen flex-col items-center justify-between p-5">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex pt-24 pl-6">
         <Prompt sendToQ={sendToQueue} />
@@ -16,7 +39,6 @@ const Home = async () => {
             className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
             href="https://kedify.io"
             target="_blank"
-            rel="noopener noreferrer"
           >
             <div className="flex flex-wrap gap-2">
               By{" "}
@@ -31,8 +53,7 @@ const Home = async () => {
           </a>
           <div className="mt-1">
             {/* todo replace w/ correct url once the pr gets merged */}
-            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://pr-367.dashboard-preview.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/summary" target="_blank"
-            rel="noopener noreferrer">check the dashboard</a>
+            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://pr-367.dashboard-preview.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/summary" target="_blank">check the dashboard</a>
           </div>
         </div>
       </div>
@@ -52,6 +73,7 @@ const Home = async () => {
       </div>
       <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-black via-black from-black via-black lg:static lg:size-auto lg:bg-none"></div>
     </main>
+    </>
   );
 }
 
