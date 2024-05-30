@@ -7,12 +7,22 @@ on:
         required: false
         default: latest
         type: string
+      skipWorker:
+        description: "should the build for worker image be skipped"
+        required: false
+        default: 'true'
+        type: string
   workflow_call:
     inputs:
       imageTag:
         description: "container image tag"
         required: false
         default: latest
+        type: string
+      skipWorker:
+        description: "should the build for worker image be skipped"
+        required: false
+        default: 'true'
         type: string
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -39,6 +49,7 @@ jobs:
     steps:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
+        if: matrix.makefileTarget == 'build-stable-diff-image-multiarch' && inputs.skipWorker != 'true'
         with:
           overprovision-lvm: 'true'
           remove-dotnet: 'true'
@@ -48,9 +59,11 @@ jobs:
           remove-docker-images: 'true'
       - name: Checkout code
         uses: actions/checkout@v4
+        if: matrix.makefileTarget != 'build-stable-diff-image-multiarch' || inputs.skipWorker != 'true'
 
       - name: Login to ghcr.io
         uses: docker/login-action@v3
+        if: matrix.makefileTarget != 'build-stable-diff-image-multiarch' || inputs.skipWorker != 'true'
         with:
           registry: ghcr.io
           username: kedify
@@ -58,14 +71,17 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        if: matrix.makefileTarget != 'build-stable-diff-image-multiarch' || inputs.skipWorker != 'true'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        if: matrix.makefileTarget != 'build-stable-diff-image-multiarch' || inputs.skipWorker != 'true'
 
       - name: Build and push
         env:
           WORKER_IMAGE: "${{ env.CONTAINER_IMG_REGISTRY }}/${{ env.CONTAINER_IMG_ORG }}/${{ env.CONTAINER_IMG_WORKER_NAME }}:${{ env.CONTAINER_IMG_TAG }}"
           WEBUI_IMAGE: "${{ env.CONTAINER_IMG_REGISTRY }}/${{ env.CONTAINER_IMG_ORG }}/${{ env.CONTAINER_IMG_WEBUI_NAME }}:${{ env.CONTAINER_IMG_TAG }}"
+        if: matrix.makefileTarget != 'build-stable-diff-image-multiarch' || inputs.skipWorker != 'true'
         run: |
           cd samples/stable-diffusion/
           make ${{ matrix.makefileTarget }}
