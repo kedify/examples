@@ -63,7 +63,7 @@ spec:
             echo "Minio configured, waiting for the result.."
             until [ -f /images/*.png ] && [ -f /images/*.json ]; do sleep 1; printf .; done
             echo -e "\nResults have been found: \n$(ls /images)\nSyncing.."
-            mc mirror /images shared/images;
+            mc mirror --exclude working /images shared/images;
 
           volumeMounts:
           - name: shared-images

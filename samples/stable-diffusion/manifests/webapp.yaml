@@ -78,7 +78,7 @@ spec:
           mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD
           mc admin info shared
           echo "Minio configured, starting sync.."
-          while true; do mc mirror --overwrite shared/images /images; sleep 1; done
+          while true; do mc mirror --exclude working --overwrite shared/images /images; sleep 1; done
 
         volumeMounts:
         - name: shared-images

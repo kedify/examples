@@ -53,10 +53,11 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         - |
+          trap 'while [ -f "/images/working" ]; do sleep 1; done; sleep 5' SIGTERM
           mc alias set shared http://minio:9000 $MINIO_USERNAME $MINIO_PASSWORD;
           mc admin info shared;
           echo "Minio configured, starting sync.."
-          mc mirror --watch /images shared/images;
+          mc mirror --exclude working --watch /images shared/images;
 
         volumeMounts:
         - name: shared-images
@@ -74,3 +75,4 @@ spec:
       volumes:
       - name: shared-images
         emptyDir: {}
+      terminationGracePeriodSeconds: 120
