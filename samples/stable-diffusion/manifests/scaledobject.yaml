@@ -16,16 +16,16 @@ spec:
   scaleTargetRef:
     name: stable-diffusion-worker
   pollingInterval: 10
-  cooldownPeriod: 300
+  cooldownPeriod: 150
   minReplicaCount: 0
   maxReplicaCount: 8
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
         scaleUp:
-          stabilizationWindowSeconds: 15
+          stabilizationWindowSeconds: 5
         scaleDown:
-          stabilizationWindowSeconds: 15
+          stabilizationWindowSeconds: 150
   triggers:
     # https://keda.sh/docs/2.14/scalers/rabbitmq-queue/
     - type: rabbitmq

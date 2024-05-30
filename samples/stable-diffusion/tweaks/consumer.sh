@@ -1,10 +1,11 @@
 #!/bin/bash
 Q_NAME=${Q_NAME:-"tasks"}
+FLAG_FILE=${FLAG_FILE:-"/app/results/working"}
 
 handle_sigterm() {
+  rm -rf ${FLAG_FILE}
   if [ -n "$_imageRequest" ]; then
     echo "SIGTERM signal received while generating image \"${_imageRequest}\""
-    reQueue "${_imageRequest}"
   else
     echo "SIGTERM signal received, but no image was being processed."
   fi
@@ -23,7 +24,9 @@ reQueue() {
 generate() {
   _prompt=$(echo ${_imageRequest} | jq '.prompt')
   _count=$(echo ${_imageRequest} | jq 2> /dev/null '.count // 1')
-  python /app/src/app.py --number_of_images "${_count}" --prompt "\"${_prompt}\""
+  touch ${FLAG_FILE}
+  python /app/src/app.py --number_of_images "${_count}" --prompt "${_prompt}"
+  rm -rf ${FLAG_FILE}
   echo "Done. Image for ${_imageRequest} has been stored in /app/results."
   sleep 1
 }
@@ -37,7 +40,7 @@ main() {
       sleep 2
       continue
     fi
-    echo "Task received, generating: \"${_imageRequest}\""
+    echo -e "\n\n\nTask received, generating: \"${_imageRequest}\""
     generate "${_imageRequest}"
     [ "${EXIT_AFTER_ONE_TASK}" = "1" ] && exit 0
   done
