@@ -33,6 +33,10 @@ spec:
           requests:
             cpu: "1"
             memory: 1Gi
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh","-c","/usr/bin/pkill amqp-consume; /usr/bin/pkill sleep"]
       - image: minio/mc
         name: minio-sidecar
         env:
