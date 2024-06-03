@@ -10,7 +10,7 @@ const Home = async () => {
   return (
     <>
     <nav
-      className="relative flex w-full flex-wrap items-center justify-between bg-zinc-50 py-2 shadow-dark-mild dark:bg-neutral-800 lg:py-2">
+      className="relative flex w-full flex-wrap items-center justify-between bg-zinc-50 py-2 shadow-dark-mild bg-neutral-800 lg:py-2">
       <div className="flex w-full flex-wrap items-center justify-between px-3">
         <div className="ms-2">
           <a className="text-xl text-sky-400 " href="https://github.com/kedify/examples/tree/main/samples/stable-diffusion" target="_blank">Stable Diffusion</a> <span className="sm:text-sky-200 hidden sm:inline-block">This AI Model is autoscaled using Kubernetes Event-Driven Austoscaling (KEDA) powered by Kedify</span>
