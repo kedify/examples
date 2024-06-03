@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: interceptor
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: keda-add-ons-http-interceptor-proxy
+            port:
+              number: 8080
+  # tls:
+  # - hosts:
+  #   - ai.example.kedify.io
+  #   secretName: webui-tls

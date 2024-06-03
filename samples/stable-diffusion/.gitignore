@@ -13,3 +13,6 @@
 
 # vendir
 /.vendir-tmp-*
+
+# kubeconfig
+anonymous.kubeconfig

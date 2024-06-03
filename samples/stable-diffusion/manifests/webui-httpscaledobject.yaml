@@ -1,0 +1,21 @@
+kind: HTTPScaledObject
+apiVersion: http.keda.sh/v1alpha1
+metadata:
+  name: webui
+  namespace: stable-diff
+spec:
+  hosts:
+    - ai.example.kedify.io
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stable-diffusion-webui
+    service: stable-diffusion-webui
+    port: 80 # todo: what port? port of the svc or targetPort on pod
+  replicas:
+    min: 0
+    max: 1
+  scalingMetric:
+    concurrency: # or requestRate
+      targetValue: 1
+  scaledownPeriod: 15
