@@ -283,3 +283,30 @@ bash-5.1# cd /images
 bash-5.1# ls
 08d90897-1b75-4f10-bd79-7fd341c7b6f8-1.png  10a0f914-f6df-4481-9c91-519eb6357bb6-3.png ...
 ```
+
+### Change Data Retention Policy
+
+Minio's bucket can be configured to automatically delete old files which can be useful for this use-case.
+
+First expose the minio's webui:
+
+```
+kubectl port-forward -n stable-diff svc/minio-console 9001
+```
+
+Log in using credentials obtained from the secret:
+
+```
+# copy the username to clipboard
+kubectl get secrets -n stable-diff minio -o jsonpath={.data.rootUser} | base64 --decode | pbcopy
+
+# copy the password to clipboard
+kubectl get secrets -n stable-diff minio -o jsonpath={.data.rootPassword} | base64 --decode | pbcopy
+
+# open http://localhost:9001
+```
+
+In the Web UI go to:
+`buckets > images > Lifecycle > Add Lifecycle Rule`
+
+Select 'Expiry' and set number of days after which the data will be deleted.
