@@ -33,9 +33,9 @@ export async function getAvailableImages(): Promise<GeneratedImage[]> {
   return (await Promise.all(images)).toSorted((a, b) => +b.generatedDate - +a.generatedDate).slice(0, imageLimit)
 }
 
-export async function sendToQueue(prompt: string, count = 1) {
+export async function sendToQueue(prompt: string, inParallel = false, count = 1) {
   const queue = 'tasks';
-  console.log(`sending request for ${count} '${prompt}' to ${queue}`)
+  console.log(`sending request for ${count} '${prompt}' to ${queue} ${inParallel && count > 1 ? 'in parallel': 'sequentially'}`)
   const conn = await amqplib.connect(`${process.env.AMQP_URL}`);
   const channel = await conn.createChannel();
 
@@ -43,9 +43,17 @@ export async function sendToQueue(prompt: string, count = 1) {
   channel.assertQueue(queue, {
     durable: false,
   });
-  const msg = {
-    prompt: prompt,
-    count: count,
-  } satisfies JobRequest
-  channel.sendToQueue(queue, Buffer.from(JSON.stringify(msg)));
+  if (inParallel && count > 1) {
+    for (let i = 0; i < count; i++) {
+      channel.sendToQueue(queue, Buffer.from(JSON.stringify({
+        prompt: prompt,
+        count: 1,
+      } satisfies JobRequest)));
+    }
+  } else {
+    channel.sendToQueue(queue, Buffer.from(JSON.stringify({
+      prompt: prompt,
+      count: count,
+    } satisfies JobRequest)));
+  }
 }
