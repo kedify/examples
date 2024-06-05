@@ -5,6 +5,7 @@ import Image from "next/image";
 import { sendToQueue } from "./services/images";
 import { Prompt } from "./prompt";
 import { GeneratedImages } from "./generatedImages";
+import { Checkbox } from "@nextui-org/react";
 
 const Home = async () => {  
   return (
@@ -30,7 +31,6 @@ const Home = async () => {
         </a>
       </div>
     </nav>
-
     <main className="flex min-h-screen flex-col items-center justify-between p-5">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex pt-24 pl-6">
         <Prompt sendToQ={sendToQueue} />
