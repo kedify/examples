@@ -4,6 +4,10 @@ metadata:
   name: rabbitmq-cluster
   namespace: rabbitmq-system
 spec:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
   secretBackend:
     externalSecret:
       name: "stablediff"

@@ -52,7 +52,10 @@ const Home = async () => {
             </div>
           </a>
           <div className="mt-1">
-            <a className="hover:text-sky-400 hover:underline underline-offset-8" href="https://dashboard.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/scaledobjects/stable-diff/stable-diff-app" target="_blank">See Demo Dashboard &amp; Metrics</a>
+            <a className="hover:text-sky-400 hover:underline underline-offset-8" 
+            // href="https://dashboard.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/scaledobjects/stable-diff/stable-diff-app?user=anon" 
+            href="https://dashboard.kedify.io/clusters/7341d179-1efd-4c15-8201-0a18a15f959c/scaledjobs/stable-diff/stable-diff-job?user=anon" 
+            target="_blank">See Demo Dashboard &amp; Metrics</a>
           </div>
         </div>
       </div>

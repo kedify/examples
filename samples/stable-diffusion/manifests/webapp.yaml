@@ -57,7 +57,7 @@ spec:
             protocol: TCP
         resources:
           requests:
-            cpu: 600m
+            cpu: 500m
             memory: 512Mi
       - image: minio/mc
         name: minio-sidecar

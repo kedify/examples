@@ -25,7 +25,7 @@ spec:
             # limits:
             #   nvidia.com/gpu: "1"
             requests:
-              cpu: 500m
+              cpu: 400m
               memory: 1Gi
           volumeMounts:
           - name: shared-images
@@ -38,6 +38,8 @@ spec:
                 key: host
           - name: DEVICE
             value: GPU
+          - name: EXIT_AFTER_ONE_TASK
+            value: '1'
         - image: minio/mc
           name: minio-sidecar
           env:
@@ -53,7 +55,7 @@ spec:
                 key: rootPassword
           resources:
             requests:
-              cpu: 100m
+              cpu: 50m
               memory: 100Mi
           command: ["/bin/sh", "-c"]
           args:
@@ -82,8 +84,9 @@ spec:
         - name: shared-images
           emptyDir: {}
     backoffLimit: 4  
-  pollingInterval: 10
-  maxReplicaCount: 8
+  pollingInterval: 5
+  maxReplicaCount: 4
+  successfulJobsHistoryLimit: 0
   rollout:
     strategy: default
     propagationPolicy: foreground
