@@ -1,7 +1,7 @@
 ## Stable Diffusion use-case
 
 ![diagram](./demo.png "Diagram")
-https://excalidraw.com/#json=p1f9nzyFye_sOgnV9AmIL,69oUi00h3HKXnsyzUReA5g
+https://excalidraw.com/#json=PeQw--dGn7z7P99xFgA0y,y9O3lE3D-r2Xy76G2Rmxow
 
 The architecture is based on the job queue design pattern where webui app is responsible for feeding the queue called `tasks` with
 job requests. Then KEDA spawns worker pods (either jobs or scales the corresponding deployment) which take the top job from the message queue
