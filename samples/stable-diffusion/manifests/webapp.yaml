@@ -106,6 +106,21 @@ spec:
         volumeMounts:
         - name: shared-images
           mountPath: /images
+      initContainers:
+        # we use the worker container image as init container for the web app to initialize the message Q and also to assure the worker image is pulled,
+        # because it may have been scaled to 0 and k8s node might have been rotated (spot instances)
+      - image: ghcr.io/kedify/stable-diffusion-worker
+        name: init-q
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          amqp-declare-queue --url "${AMQP_URL}" -q "tasks"
+        env:
+        - name: AMQP_URL
+          valueFrom:
+            secretKeyRef:
+              name: stablediff-rabbitmq
+              key: host
       volumes:
       - name: shared-images
         emptyDir: {}
