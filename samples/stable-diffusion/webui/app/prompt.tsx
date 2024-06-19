@@ -31,13 +31,13 @@ export const Prompt: React.FC<PromptProps> = ({ sendToQ }) => {
     },
   });
   const safetyCheck = (prompt: string) => {
-    const stopList = ["boobs", "tits", "vagina", "penis", "dick", "naked", "nude", "fuck", "coitus", "sex", "shit", "blood", "murder", "dead"];
+    const stopList = ["boob", "tits", "vagina", "penis", "dick", "naked", "nude", "fuck", "coitus", "sex", "shit", "blood", "murder", "dead"];
     return stopList.some(w => prompt.toLowerCase().includes(w));
   }
 
   const generateOnClick = () => {
     if (prompt) {
-      if (!safetyCheck(prompt)) {
+      if (safetyCheck(prompt)) {
         toast.warning("Please don't use this tool for creating NSFW content.");
         focusPrompt();
         return
