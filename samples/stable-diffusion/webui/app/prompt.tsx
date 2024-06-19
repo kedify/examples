@@ -30,8 +30,18 @@ export const Prompt: React.FC<PromptProps> = ({ sendToQ }) => {
       return sendToQ(img, inParallel, count);
     },
   });
+  const safetyCheck = (prompt: string) => {
+    const stopList = ["boobs", "tits", "vagina", "penis", "dick", "naked", "nude", "fuck", "coitus", "sex", "shit", "blood", "murder", "dead"];
+    return stopList.some(w => prompt.toLowerCase().includes(w));
+  }
+
   const generateOnClick = () => {
     if (prompt) {
+      if (!safetyCheck(prompt)) {
+        toast.warning("Please don't use this tool for creating NSFW content.");
+        focusPrompt();
+        return
+      }
       toast.success("Task has been added to job queue 🤖");
       mutation.mutate([prompt, inParallel, count]);
       setPrompt('');
