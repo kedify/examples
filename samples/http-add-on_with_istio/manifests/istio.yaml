@@ -1,0 +1,36 @@
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: app
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - 'www.podinfo.com'
+    port:
+      name: http
+      number: 80
+      protocol: HTTP
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  hosts:
+  - "www.podinfo.com"
+  gateways:
+  - app
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: podinfo
+        port:
+          number: 9898
