@@ -1,0 +1,20 @@
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  hosts:
+  - "www.podinfo.com"
+  gateways:
+  - app
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+        port:
+          number: 8080

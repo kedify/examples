@@ -1,0 +1,22 @@
+---
+kind: HTTPScaledObject
+apiVersion: http.keda.sh/v1alpha1
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  hosts:
+    - www.podinfo.com
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: podinfo
+    service: podinfo
+    port: 9898
+  replicas:
+    min: 0
+    max: 10
+  scalingMetric:
+    requestRate:
+      targetValue: 1
+  scaledownPeriod: 5
