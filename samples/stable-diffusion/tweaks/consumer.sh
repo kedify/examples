@@ -25,7 +25,7 @@ generate() {
   _prompt=$(echo ${_imageRequest} | jq '.prompt')
   _count=$(echo ${_imageRequest} | jq 2> /dev/null '.count // 1')
   touch ${FLAG_FILE}
-  python /app/src/app.py --number_of_images "${_count}" --prompt "${_prompt}"
+  python /app/src/app.py --use_safety_checker --number_of_images "${_count}" --prompt "${_prompt}"
   rm -rf ${FLAG_FILE}
   echo "Done. Image for ${_imageRequest} has been stored in /app/results."
   sleep 1
