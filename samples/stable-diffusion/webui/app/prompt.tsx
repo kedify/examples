@@ -31,7 +31,7 @@ export const Prompt: React.FC<PromptProps> = ({ sendToQ }) => {
     },
   });
   const safetyCheck = (prompt: string) => {
-    const stopList = ["boob", "tits", "vagina", "penis", "dick", "naked", "nude", "fuck", "coitus", "sex", "shit", "blood", "murder", "dead"];
+    const stopList = ["boob", "tits", "vagina", "penis", "dick", "cock", "trump", "naked", "nude", "fuck", "coitus", "sex", "shit", "blood", "murder", "dead"];
     return stopList.some(w => prompt.toLowerCase().includes(w));
   }
 
