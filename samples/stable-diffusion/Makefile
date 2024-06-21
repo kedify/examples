@@ -74,6 +74,9 @@ deploy-app: ## Deploys the webui.
 	@$(call say,Deploy stable diffusion app)
 	@$(call createNs,stable-diff)
 	kubectl apply -nstable-diff -f manifests/webapp.yaml
+	# in case you want to provide custom certs + uncomment the lines in manifests/webapp-ingress.yaml
+	# kubectl create secret tls webui-tls -nstable-diff --key ./.certs/key.pem --cert ./.certs/cert.pem
+	kubectl apply -nstable-diff -f manifests/webapp-ingress.yaml
 	kubectl wait -nstable-diff --timeout=90s --for=condition=ready pod -lapp=stable-diffusion-webui
 
 	@$(call say,Exposing..)
@@ -117,6 +120,28 @@ deploy-scaledjob: ## Deploys KEDA scaledjob.
 	@$(call say,Deploy KEDA scaledjob)
 	-kubectl delete -nstable-diff -f manifests/scaledobject.yaml
 	kubectl apply -nstable-diff -f manifests/scaledjob.yaml
+
+.PHONY: create-anonymous-kubeconfig
+create-anonymous-kubeconfig:
+	@cat manifests/kubeconfig.yaml.tmpl | \
+	 CA=$(shell kubectl get secrets -n stable-diff anonymous-secret -o jsonpath="{.data.ca\.crt}") \
+	 CLUSTER_SERVER=$(shell kubectl config view --flatten --minify | yq '.clusters[].cluster.server') \
+	 SECRET_TOKEN=$(shell kubectl get secrets -n stable-diff anonymous-secret -o jsonpath={.data.token}) envsubst > anonymous.kubeconfig
+	@echo Caveat: If on GKE, this will not work for you.
+	@echo your new read-only kubeconfig is stored in ./anonymous.kubeconfig. Verifying it works with kubectl --kubeconfig=anonymous.kubeconfig get pods -nstable-diff
+	kubectl --kubeconfig=anonymous.kubeconfig get pods -nstable-diff
+
+.PHONY: deploy-httpscaledobject
+deploy-httpscaledobject: ## Deploys the httpscaledobject for webui app so that the webui can be also scaled to 0.
+	helm repo add kedacore https://kedacore.github.io/charts
+	helm upgrade -i http-add-on kedacore/keda-add-ons-http --namespace keda \
+		--set interceptor.replicas.min=1 \
+		--set scaler.replicas=1 \
+		--set crds.install=false
+	k apply -f manifests/webui-httpscaledobject.yaml
+	# in case you want to provide custom certs + uncomment the lines in manifests/webapp-ingress.yaml
+	# kubectl create secret tls webui-tls -nkeda --key ./.certs/key.pem --cert ./.certs/cert.pem
+	k apply -f manifests/interceptor-ingress.yaml
 
 .PHONY: deploy
 deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio, RabbitMQ and the web ui.
