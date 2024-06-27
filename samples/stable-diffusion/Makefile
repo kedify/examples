@@ -6,6 +6,7 @@ WEBUI_IMAGE ?= ghcr.io/kedify/stable-diffusion-webui
 CLUSTER_NAME ?= stable-diff
 HACK_BIN ?= bin
 VENDIR := $(abspath $(HACK_BIN)/vendir)
+CERT_MANAGER_VERSION ?= 1.15.0
 
 MINIO_USER := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 8)
 MINIO_PASSWORD := $(shell export LC_ALL=C; tr -dc 'A-Za-z0-9!$%' </dev/urandom | head -c 15)
@@ -117,6 +118,13 @@ deploy-scaledjob: ## Deploys KEDA scaledjob.
 	@$(call say,Deploy KEDA scaledjob)
 	-kubectl delete -nstable-diff -f manifests/scaledobject.yaml
 	kubectl apply -nstable-diff -f manifests/scaledjob.yaml
+
+.PHONY: deploy-cert-manager
+deploy-cert-manager: ## Deploys cert manager and related CRs.
+	@$(call say,Deploy cert manager)
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v$(CERT_MANAGER_VERSION)/cert-manager.yaml
+	kubectl apply -nstable-diff -f manifests/cert-manager.yaml
+	-kubectl annotate ing --overwrite -nstable-diff stable-diffusion-webui cert-manager.io/issuer=letsencrypt-production
 
 .PHONY: deploy
 deploy: deploy-minio deploy-rabbitmq deploy-app ## Deploys minio, RabbitMQ and the web ui.
