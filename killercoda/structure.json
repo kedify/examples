@@ -1,0 +1,8 @@
+{
+    "title": "Kedify KEDA",
+    "description": "Courses to enhance your knowledge of KEDA",
+    "image": "./assets/kedify-logo.png",
+    "items": [
+        { "path": "http-scaler" }
+    ]
+}
