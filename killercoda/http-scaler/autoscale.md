@@ -91,7 +91,7 @@ In order to stop the benchmark, hit:
 # ctrl+c
 ```{{exec interrupt}}
 
-Congratulations! You have successfully configured HTTP autoscaling using Kedify. There is one more optional extra step with internals of KEDA, you can get there by clicking on the `CHECK`{{}} button or you can check out our other courses at:
+Congratulations! You have successfully configured HTTP autoscaling using Kedify, you can check out our other courses at:
 https://killercoda.com/kedify/course/killercoda
 
 ##### 4 / 4
