@@ -75,7 +75,7 @@ EOF
 
 So far these are all standard Kubernetes resources, KEDA is designed to plug into your application, your configuration, your workflow rather than force you to redesign you CI/CD pipelines.
 
-The application is configured to receive requests for URL `http://blue.com`{{}}, although this domain will work only locally here in the Killercoda environment. It may take a little bit of time for the ingress controller to assign an IP address to our `Ingress`{{}}, then this snippet ensures matching entry in `/etc/hosts`{{}} so the URL `http://blue.com`{{}} can be resolved successfully.
+The application is configured to receive requests for URL `http://blue.com`{{}}, although this domain will work only locally here in the Killercoda environment. It may take a little bit of time for the ingress controller to assign an IP address to our `Ingress`{{}}, then this snippet ensures matching entry in `/etc/hosts`{{}} so the URL `http://blue.com`{{}} can be resolved successfully. In the real world scenario you would probably either create the DNS record manually or use the external-dns project with the Ingress resource.
 ```
 kubectl wait -ndefault --for=jsonpath='{.status.loadBalancer.ingress}' ingress/blue --timeout=5m
 IP=$(kubectl get -ndefault ingress blue -o json | jq --raw-output '.status.loadBalancer.ingress[].ip')
