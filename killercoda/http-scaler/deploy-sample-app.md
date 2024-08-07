@@ -73,7 +73,7 @@ spec:
 EOF
 ```{{exec}}
 
-So far these are all standard Kubernetes resources, KEDA is designed to plug into your application, your configuration, your workflow rather than force you to redesign you CI/CD pipelines.
+So far these are all standard Kubernetes resources, KEDA is designed to plug into your application, your configuration, your workflow rather than force you to redesign your CI/CD pipelines.
 
 The application is configured to receive requests for URL `http://blue.com`{{}}, although this domain will work only locally here in the Killercoda environment. It may take a little bit of time for the ingress controller to assign an IP address to our `Ingress`{{}}, then this snippet ensures matching entry in `/etc/hosts`{{}} so the URL `http://blue.com`{{}} can be resolved successfully. In the real world scenario you would probably either create the DNS record manually or use the external-dns project with the Ingress resource.
 ```
