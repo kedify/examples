@@ -1,4 +1,4 @@
-This last step is intended for advanced and detailed understanding of the internals how KEDA works. This is purely optional and contains low level details, you won't need to know any of this for your application autoscaling but if you are interested to learn more and not affraid to dive into the KEDA's plumbing, you are welcome to continue.
+This last step is intended for advanced and detailed understanding of the internals how KEDA works. This is purely optional and contains low level details, you won't need to know any of this for your application autoscaling but if you are interested in learning more and not afraid to dive into the KEDA's plumbing, you are welcome to continue.
 
 > None of the following information is required to understand KEDA and/or configure application autoscaling.
 
@@ -7,7 +7,7 @@ get query parameters from HPA
 ```bash
 metric_name=$(kubectl get -ndefault hpa keda-hpa-demo -o json | jq --raw-output '.spec.metrics[0].external.metric.name')
 label_selector=$(kubectl get -ndefault hpa keda-hpa-demo -o json | jq --raw-output '.spec.metrics[0].external.metric.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
-encoded_label=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$label_selector'''))")
+encoded_label=$(echo ${label_selector} | jq '@uri' -jRr)
 ```{{exec}}
 
 get metric value
