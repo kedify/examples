@@ -58,7 +58,6 @@ metadata:
   name: blue
   namespace: default
 spec:
-  ingressClassName: nginx
   rules:
   - host: blue.com
     http:

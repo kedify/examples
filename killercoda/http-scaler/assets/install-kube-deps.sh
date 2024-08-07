@@ -22,8 +22,10 @@ metadata:
   namespace: metallb-system
 EOF
 
-helm upgrade --install ingress-nginx ingress-nginx \
-  --repo https://kubernetes.github.io/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+helm install traefik traefik/traefik --namespace traefik --create-namespace \
+    --set providers.kubernetesIngress.allowEmptyServices=true \
+    --set providers.kubernetesIngress.publishedService.enabled=true
 
 echo "all done"
