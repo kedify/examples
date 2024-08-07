@@ -31,10 +31,6 @@
         "title": "Autoscale Application",
         "text": "autoscale.md",
         "verify": "autoscale-verify.sh"
-      },
-      {
-        "title": "Extras, Internals & Plumbing",
-        "text": "extra.md"
       }
     ]
   },
