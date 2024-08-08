@@ -81,7 +81,7 @@ kubectl patch scaledobject blue -n default --type=merge -p='{"spec":{"advanced":
 kubectl patch scaledobject blue -n default --type=merge -p='{"spec":{"cooldownPeriod": 5}}'
 ```{{exec}}
 
-To observe the metric changing in real time, you can run following benchmark script running [`hey`{{}}](https://github.com/rakyll/hey) under the hood:
+To observe the metric changing in real time, you can run following benchmark script running [`hey`{{}}](https://github.com/rakyll/hey) under the hood. It mocks a spike in traffic so you can observe both scale out as well as scale in:
 ```bash
 /scripts/benchmark.sh
 ```{{exec}}
