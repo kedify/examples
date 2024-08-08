@@ -35,4 +35,7 @@ The agent installed metrics server, latest KEDA and HTTP Add-On. To stop the `wa
 
 When you have finished agent installation and exploring the KEDA deployments, click on the `CHECK`{{}} button on the bottom to move to the next step.
 
+&nbsp;
+&nbsp;
+
 ##### 2 / 4
