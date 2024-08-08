@@ -12,10 +12,6 @@ After the agent is deployed, it will install KEDA and other necessary dependenci
 watch -n1 --color kubecolor --force-colors get deployments -nkeda
 ```{{exec}}
 
-to stop the `watch`{{}} loop, you can just hit
-```
-# ctrl+c
-```{{exec interrupt}}
 
 Deployed KEDA should look similar to this, it may take around 1 to 2 minutes for all KEDA parts to become fully ready
 ```bash
@@ -30,7 +26,10 @@ kedify-agent                           1/1     1            1           99s
 metrics-server                         1/1     1            1           88s
 ```{{}}
 
-The agent installed metrics server, latest KEDA and HTTP Add-On.
+The agent installed metrics server, latest KEDA and HTTP Add-On. To stop the `watch`{{}} loop, you can just hit:
+```
+# ctrl+c
+```{{exec interrupt}}
 
 > The official KEDA documentation is a great resource of information if you are curious to learn more about the fundamental building blocks, architecture and best practices, check out https://keda.sh/docs/2.15/concepts.
 
