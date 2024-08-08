@@ -95,4 +95,7 @@ Congratulations! You have successfully configured HTTP autoscaling using Kedify,
 * https://kedify.io
 * https://killercoda.com/kedify/course/killercoda
 
+&nbsp;
+&nbsp;
+
 ##### 4 / 4

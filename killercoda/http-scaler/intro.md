@@ -8,4 +8,7 @@ Kedify's HTTP Scaler is more performant than the KEDA upstream version. For deta
 
 Kedify also simplifies traffic routing with `Ingress`{{}} autowiring, automatically configuring `Ingress` resources to match autoscaling setups. This reduces misconfiguration risks and provides a seamless experience for managing ingress, with a safe fallback and built-in recovery mechanisms.
 
+&nbsp;
+&nbsp;
+
 ##### 1 / 4
