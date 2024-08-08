@@ -4,6 +4,8 @@ set -euo pipefail
 
 touch /tmp/progress
 (
+  echo "" >> /tmp/progress
+  echo "" >> /tmp/progress
   echo "Please wait while we prepare your environment" >> /tmp/progress
   sleep 8
   echo "-- installing kubernetes apps " >> /tmp/progress
