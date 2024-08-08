@@ -74,7 +74,7 @@ for i in $(seq 1 20); do curl http://blue.com; done
 kubectl get --raw '/api/v1/namespaces/keda/services/keda-add-ons-http-interceptor-admin:9090/proxy/queue' | jq '.'
 ```{{exec}}
 
-Before the benchmark, we will make the KEDA behaviour more rapid, both scaling up and scaling down. This is unlikely something you'd want in a production environment, but it is helpful in demos and when testing KEDA behaviour.
+Before the benchmark, we will make the KEDA behaviour more rapid, both scaling in and scaling out. This is unlikely something you'd want in a production environment, but it is helpful in demos and when testing KEDA behaviour.
 ```
 kubectl patch scaledobject blue -n default --type=merge -p='{"spec":{"advanced":{"horizontalPodAutoscalerConfig":{"behavior":{"scaleDown":{"stabilizationWindowSeconds": 5}}}}}}'
 kubectl patch scaledobject blue -n default --type=merge -p='{"spec":{"advanced":{"horizontalPodAutoscalerConfig":{"behavior":{"scaleUp":{"stabilizationWindowSeconds": 1}}}}}}'
