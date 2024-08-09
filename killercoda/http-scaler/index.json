@@ -7,6 +7,9 @@
       "foreground": "foreground.sh",
       "background": "background.sh"
     },
+    "finish": {
+      "text": "finish.md"
+    },
     "assets": {
       "host01": [
         { "file": "init-kedify.sh", "target": "/scripts", "chmod": "+x" },

@@ -52,18 +52,20 @@ trap "kill $(pidof hey) 2>/dev/null; kill -SIGKILL $(pidof watch) 2>/dev/null" E
   echo "~100 req/sec" >> /tmp/hey.output
   hey -z 5s -c 100 -q 1 http://blue.com > /dev/null
   
-  echo "~90 req/sec" >> /tmp/hey.output
-  hey -z 5s -c 90 -q 1 http://blue.com > /dev/null
+  echo "~30 req/sec" >> /tmp/hey.output
+  hey -z 10s -c 30 -q 1 http://blue.com > /dev/null
  
-  echo "~70 req/sec" >> /tmp/hey.output
-  hey -z 5s -c 70 -q 1 http://blue.com > /dev/null
+  echo "~15 req/sec" >> /tmp/hey.output
+  hey -z 10s -c 15 -q 1 http://blue.com > /dev/null
   
-  echo "~40 req/sec" >> /tmp/hey.output
-  hey -z 5s -c 40 -q 1 http://blue.com > /dev/null
+  echo "~10 req/sec" >> /tmp/hey.output
+  hey -z 15s -c 10 -q 1 http://blue.com > /dev/null
 
   echo "~5 req/sec" >> /tmp/hey.output
-  hey -z 10s -c 5 -q 1 http://blue.com > /dev/null
+  hey -z 30s -c 5 -q 1 http://blue.com > /dev/null
 
-  echo "benchmark finished, press ctrl+c to finish the watch loop" >> /tmp/hey.output
+  echo "" >> /tmp/hey.output
+  echo "benchmark finished, press 'ctrl+c' to kill the watch loop" >> /tmp/hey.output
+  echo "when you are done observing the application scale-in" >> /tmp/hey.output
 )&
 watch --no-title -n1 --color -x bash -c "f"
