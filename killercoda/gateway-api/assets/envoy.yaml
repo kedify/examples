@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy
+  namespace: default
+data:
+  envoy.yaml: |
+    static_resources:
+      listeners:
+      - name: listener_0
+        address:
+          socket_address: { address: 0.0.0.0, port_value: 8080 }
+        filter_chains:
+        - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              stat_prefix: ingress_http
+              codec_type: AUTO
+              route_config:
+                name: local_route
+                virtual_hosts:
+                - name: local_service
+                  domains: ["*"]
+                  routes:
+                  - match:
+                      prefix: "/"
+                      headers:
+                      - name: "x-keda-http-addon"
+                        exact_match: "blue"
+                    route:
+                      cluster: interceptor_proxy
+                      host_rewrite_literal: blue
+                  - match:
+                      prefix: "/"
+                      headers:
+                      - name: "x-keda-http-addon"
+                        exact_match: "prpl"
+                    route:
+                      cluster: interceptor_proxy
+                      host_rewrite_literal: prpl
+              http_filters:
+              - name: envoy.filters.http.router
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+      clusters:
+        - name: interceptor_proxy
+          connect_timeout: 10s
+          type: strict_dns
+          lb_policy: round_robin
+          load_assignment:
+            cluster_name: interceptor_proxy
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: kedify-proxy.default.svc.cluster.local
+                          port_value: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: envoy
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: envoy
+    spec:
+      containers:
+      - name: envoy
+        image: envoyproxy/envoy:v1.30.4
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: config
+          mountPath: /etc/envoy
+      volumes:
+      - name: config
+        configMap:
+          name: envoy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: envoy
+  type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+  namespace: default
+spec:
+  hostnames:
+  - keda-meets-gw.com
+  parentRefs:
+  - kind: Gateway
+    namespace: envoy-gateway-system
+    name: eg
+  rules:
+  - backendRefs:
+    - kind: Service
+      name: envoy
+      port: 8080
+      weight: 1
+      filters: 
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          set:
+          - name: x-keda-http-addon
+            value: blue
+    - kind: Service
+      name: envoy
+      port: 8080
+      weight: 1
+      filters: 
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          set:
+          - name: x-keda-http-addon
+            value: prpl
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: blue 
+  namespace: default
+spec:
+  maxReplicaCount: 5
+  minReplicaCount: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: blue
+  triggers:
+  - metadata:
+      hosts: blue
+      pathPrefixes: /
+      port: "8080"
+      scalingMetric: requestRate
+      service: blue
+      targetValue: "1"
+    metricType: AverageValue
+    type: kedify-http

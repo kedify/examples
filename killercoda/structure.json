@@ -3,6 +3,7 @@
     "description": "Courses to enhance your knowledge of KEDA",
     "image": "./assets/kedify-logo.png",
     "items": [
-        { "path": "http-scaler" }
+        { "path": "http-scaler" },
+        { "path": "gateway-api" }
     ]
 }
