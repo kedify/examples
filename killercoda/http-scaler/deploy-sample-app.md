@@ -84,12 +84,17 @@ IP=$(kubectl get -ndefault ingress blue -o json | jq --raw-output '.status.loadB
 echo "${IP} blue.com" >> /etc/hosts
 ```{{exec}}
 
-Lets hit the endpoint and see some responses from our application:
+Lets hit the endpoint of the appplication:
 ```
 curl http://blue.com
 ```{{exec}}
 
-There is a single `Deployment`{{}} with single `Pod`{{}}, `Service`{{}} and `Ingress`{{}} resources that you might expect in a standard simple backend application hosted on Kubernetes.
+You should see similar reponse:
+```bash
+[blue]  -> [192.168.0.18]
+```{{}}
+
+You can also verify that all components of our application is running. There is a single `Deployment`{{}} with single `Pod`{{}}, `Service`{{}} and `Ingress`{{}} resources that you might expect in a standard simple backend application hosted on Kubernetes.
 ```
 kubectl get deployment -ndefault blue
 ```{{exec}}
