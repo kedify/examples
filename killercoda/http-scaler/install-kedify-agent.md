@@ -1,6 +1,6 @@
-The Kedify agent is an application designed to simplify deployment and management of KEDA seamlessly within your Kubernetes environment. For the purposes of the scenario here in Killercoda, you will use the pre-installed [Kedify kubectl plugin](https://github.com/jkremser/kubectl-kedify). You can click on the command below, it will get automatically executed in the terminal on the right part of the screen. Enter `y`{{}} to indicate "yes" to the installation prompt.
+The Kedify agent is an application designed to simplify deployment and management of KEDA seamlessly within your Kubernetes environment. For the purposes of the scenario here in Killercoda, you will use the pre-installed [Kedify kubectl plugin](https://github.com/jkremser/kubectl-kedify). You can click on the command below, it will get automatically executed in the terminal on the right part of the screen.
 ```bash
-kubectl kedify install --email http-scaler@killercoda.com
+kubectl kedify install --email http-scaler@killercoda.com -y
 ```{{exec}}
 
 The agent also enhances KEDA capabilities with additional features. In scope of this scenario, you are going to learn about the HTTP scaler with streamlined management of `Ingress`{{}} resources.
