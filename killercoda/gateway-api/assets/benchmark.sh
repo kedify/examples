@@ -137,7 +137,7 @@ export -f color_app
 
   echo "" >> /tmp/hey.output
   echo "benchmark finished, press 'ctrl+c' to kill the watch loop" >> /tmp/hey.output
-  echo "when you are done observing the application scale-in" >> /tmp/hey.output
+  echo "when you are done observing the application behavior" >> /tmp/hey.output
 )&
 PID=$!
 
