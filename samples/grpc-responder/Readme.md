@@ -1,4 +1,3 @@
-```markdown
 # gRPC Responder
 
 This is a simple gRPC server implemented in Go that responds with a configurable message and delay. The server can optionally be run with TLS enabled for secure communication.
@@ -81,3 +80,127 @@ To clean up the generated files, including the binary and TLS certificates, run:
 make clean
 ```
 
+## k3d Setup
+
+To set up the k3d cluster with the necessary configurations and install the NGINX Ingress Controller, follow these steps:
+
+1. **Create and Configure the k3d Cluster**:
+
+   First, delete any existing k3d clusters and create a new one with ports configured for HTTP and HTTPS, and disable Traefik:
+
+   ```bash
+   k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
+   ```
+
+2. **Install NGINX Ingress Controller**:
+
+   Add the Helm repository for ingress-nginx and update the Helm repository list:
+
+   ```bash
+   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+   helm repo update
+   ```
+
+   Install the NGINX Ingress Controller in the `nginx-ingress` namespace:
+
+   ```bash
+   helm install nginx-ingress ingress-nginx/ingress-nginx \
+     --namespace nginx-ingress \
+     --create-namespace \
+     --set controller.publishService.enabled=true \
+     --set controller.service.type=LoadBalancer
+   ```
+
+   Watch the service to ensure it's running correctly:
+
+   ```bash
+   kubectl get service --namespace nginx-ingress nginx-ingress-ingress-nginx-controller --output wide --watch
+   ```
+
+### Testing without TLS on k3d
+
+1. **Disable TLS in the Deployment**:
+
+   In your deployment configuration (`config/app.yaml`), disable TLS by setting the `TLS_ENABLED` environment variable to `false`:
+
+   ```yaml
+   - name: TLS_ENABLED
+     value: "false"
+   ```
+
+2. **Apply the Configuration**:
+
+   Apply the application and ingress configurations:
+
+   ```bash
+   kubectl apply -f config/app.yaml
+   kubectl apply -f config/ingress.yaml
+   ```
+
+3. **Update `/etc/hosts`**:
+
+   Add `grpc.keda` to your `/etc/hosts` file, pointing to `localhost`:
+
+   ```
+   127.0.0.1 grpc.keda
+   ```
+
+4. **Run the Test**:
+
+   Test the gRPC service using `grpcurl`:
+
+   ```bash
+   grpcurl -plaintext -d '{"name": "Test"}' grpc.keda:9080 responder.HelloService/SayHello
+   ```
+
+   You should receive a response similar to:
+
+   ```json
+   {
+     "message": "Hello from Kedify"
+   }
+   ```
+
+### Testing with TLS on k3d
+
+1. **Enable TLS in the Deployment**:
+
+   In your deployment configuration (`config/app.yaml`), enable TLS by setting the `TLS_ENABLED` environment variable to `true`:
+
+   ```yaml
+   - name: TLS_ENABLED
+     value: "true"
+   ```
+
+2. **Apply the Configuration**:
+
+   Apply the updated application and TLS-enabled ingress configurations:
+
+   ```bash
+   kubectl apply -f config/app.yaml
+   kubectl apply -f config/ingress-tls.yaml
+   ```
+
+3. **Update `/etc/hosts`**:
+
+   Ensure that `grpc.keda` is correctly mapped to `localhost` in your `/etc/hosts` file:
+
+   ```
+   127.0.0.1 grpc.keda
+   ```
+
+4. **Run the Test**:
+
+   Test the gRPC service with TLS using `grpcurl`:
+
+   ```bash
+   grpcurl -d '{"name": "Test"}' -cacert server.crt grpc.keda:9443 responder.HelloService/SayHello
+   ```
+
+   You should receive a response like:
+
+   ```json
+   {
+     "message": "Hello from Kedify"
+   }
+   ```
