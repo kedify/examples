@@ -1,4 +1,5 @@
 APP_NAME := grpc-responder
+IMG := ghrc.io/kedify/sample-$(APP_NAME)
 PROTO_SRC := proto/service.proto
 PROTO_GEN_DIR := ./proto
 GOPATH_BIN := $(shell go env GOPATH)/bin
@@ -23,7 +24,7 @@ build: proto
 certs:
 	openssl genpkey -algorithm RSA -out $(KEY_FILE)
 	openssl req -new -key $(KEY_FILE) -out server.csr -subj "/CN=localhost"
-	echo "subjectAltName=DNS:localhost,IP:127.0.0.1" > $(SAN_FILE)
+	echo "subjectAltName=DNS:localhost,DNS:grpc.keda,IP:127.0.0.1" > $(SAN_FILE)
 	openssl x509 -req -in server.csr -signkey $(KEY_FILE) -out $(CERT_FILE) -days 365 -extfile $(SAN_FILE)
 	rm -f server.csr $(SAN_FILE)
 
@@ -37,9 +38,9 @@ run: build certs
 	./$(APP_NAME)
 
 docker-build:
-	docker build -t $(APP_NAME) .
+	docker build -t $(IMG) .
 
-docker-run: docker-build certs
+docker-run:
 	docker run -p 50051:50051 \
 		-e PORT=$${PORT:-$(DEFAULT_PORT)} \
 		-e RESPONSE_DELAY=$${RESPONSE_DELAY:-$(DEFAULT_DELAY)} \
@@ -48,7 +49,7 @@ docker-run: docker-build certs
 		-e TLS_CERT_FILE=/certs/$(CERT_FILE) \
 		-e TLS_KEY_FILE=/certs/$(KEY_FILE) \
 		-v $(PWD):/certs \
-		$(APP_NAME)
+		$(IMG)
 
 clean:
 	rm -f $(APP_NAME) $(CERT_FILE) $(KEY_FILE)
