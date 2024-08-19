@@ -40,6 +40,9 @@ run: build certs
 docker-build:
 	docker build -t $(IMG) .
 
+docker-publish-multiarch:
+	docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 . -t $(IMG)
+
 docker-run:
 	docker run -p 50051:50051 \
 		-e PORT=$${PORT:-$(DEFAULT_PORT)} \
