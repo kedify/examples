@@ -204,3 +204,16 @@ To set up the k3d cluster with the necessary configurations and install the NGIN
      "message": "Hello from Kedify"
    }
    ```
+
+### Autoscaling with KEDA
+
+For both versions of the `grpc-responder`, there are also two versions of the `ScaledObject` with trigger `kedify-http` - plaintext and TLS. Support for TLS includes end-to-end encryption with re-encryption on the `kedify-proxy` and `interceptor` to allow L7 routing. For plaintext gRPC, there is currently a limitted support for cold-starts, it's recommended to scale to 1. For gRPC with TLS, scale to zero works fully as expected.
+
+When the application is deployed without TLS, use:
+```
+kubectl apply -f config/so.yaml
+```
+When the application is running with TLS, use:
+```
+kubectl apply -f config/so-tls.yaml
+```

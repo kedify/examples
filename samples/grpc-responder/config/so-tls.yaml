@@ -1,0 +1,31 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: grpc-responder
+spec:
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+    scalingModifiers: {}
+  cooldownPeriod: 5
+  maxReplicaCount: 2
+  minReplicaCount: 0
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: grpc-responder
+  triggers:
+  - metadata:
+      granularity: 1s
+      hosts: grpc.keda
+      pathPrefixes: /
+      port: "50051"
+      scalingMetric: requestRate
+      service: grpc-responder
+      targetValue: "100"
+      window: 1m
+      tlsSecretName: grpc-responder
+    metricType: AverageValue
+    type: kedify-http
