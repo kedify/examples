@@ -1,10 +1,13 @@
-FROM golang:1.22-alpine AS builder
-
+FROM --platform=${BUILDPLATFORM} golang:1.22-alpine AS builder
+ARG TARGETPLATFORM BUILDPLATFORM TARGETOS TARGETARCH
 WORKDIR /app
-COPY . .
-RUN go build -o grpc-responder .
+COPY main.go .
+COPY go.mod .
+COPY go.sum .
+COPY proto/ proto/
+COPY helloservice/ helloservice/
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o grpc-responder .
 
-FROM gcr.io/distroless/static:nonroot
-
+FROM --platform=${TARGETPLATFORM} gcr.io/distroless/static:nonroot
 COPY --from=builder /app/grpc-responder /grpc-responder
 CMD ["/grpc-responder"]

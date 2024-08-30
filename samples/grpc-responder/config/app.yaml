@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: grpc-responder
-        image: ghrc.io/kedify/sample-grpc-responder
+        image: ghcr.io/kedify/sample-grpc-responder
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 50051
