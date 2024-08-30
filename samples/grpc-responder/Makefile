@@ -1,5 +1,5 @@
 APP_NAME := grpc-responder
-IMG := ghrc.io/kedify/sample-$(APP_NAME)
+IMG := ghcr.io/kedify/sample-$(APP_NAME)
 PROTO_SRC := proto/service.proto
 PROTO_GEN_DIR := ./proto
 GOPATH_BIN := $(shell go env GOPATH)/bin
