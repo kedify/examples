@@ -1,0 +1,43 @@
+{
+  "title": "Kedify gRPC scaling",
+  "description": "Guide on how to scale gRPC service with KEDA.",
+  "details": {
+    "intro": {
+      "text": "intro.md",
+      "foreground": "foreground.sh",
+      "background": "background.sh"
+    },
+    "finish": {
+      "text": "finish.md"
+    },
+    "assets": {
+      "host01": [
+        { "file": "init-kedify.sh", "target": "/scripts", "chmod": "+x" },
+        { "file": "init-kedify.service", "target": "/lib/systemd/system" },
+        { "file": "install-kube-deps.sh", "target": "/scripts", "chmod": "+x" },
+        { "file": "install-kube-deps.service", "target": "/lib/systemd/system" },
+        { "file": "benchmark.sh", "target": "/scripts", "chmod": "+x" }
+      ]
+    },
+    "steps": [
+      {
+        "title": "Install Kedify Agent",
+        "text": "install-kedify-agent.md",
+        "verify": "install-kedify-agent-verify.sh"
+      },
+      {
+        "title": "Deploy Sample Application",
+        "text": "deploy-sample-app.md",
+        "verify": "deploy-sample-app-verify.sh"
+      },
+      {
+        "title": "Autoscale Application",
+        "text": "autoscale.md",
+        "verify": "autoscale-verify.sh"
+      }
+    ]
+  },
+  "backend": {
+    "imageid": "kubernetes-kubeadm-1node-4GB-rapid"
+  }
+}

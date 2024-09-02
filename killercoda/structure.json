@@ -4,6 +4,7 @@
     "image": "./assets/kedify-logo.png",
     "items": [
         { "path": "http-scaler" },
-        { "path": "gateway-api" }
+        { "path": "gateway-api" },
+        { "path": "grpc" }
     ]
 }
