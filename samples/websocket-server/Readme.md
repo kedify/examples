@@ -40,7 +40,7 @@ This should work with a default k3d cluster and Traefik ingress controller
 
 4. **Test WebSocket in browser**:
    
-   In your browser, go to [websocket.keda](websocket.keda) and follwo the instructions there
+   In your browser, go to [websocket.keda](websocket.keda) and follow the instructions there
 
 5. **Enable Auto Scaling**:
 
