@@ -1,0 +1,26 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: kedify-sample-sj
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        containers:
+        - name: busybox-worker
+          image: busybox
+          args:
+          - /bin/sh
+          - -c
+          - sleep 30
+        restartPolicy: Never
+  pollingInterval: 30
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  maxReplicaCount: 10
+  triggers:
+  - type: metrics-api
+    metadata:
+      url: "http://kedify-sample-minute-metrics.default.svc.cluster.local/api/v1/minutemetrics"
+      valueLocation: "value"
+      targetValue: '12'
