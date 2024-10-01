@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-strimzi-consumer2
+  labels:
+    app: kafka-strimzi-consumer2
+spec:
+  selector:
+    matchLabels:
+      app: kafka-strimzi-consumer2
+  template:
+    metadata:
+      labels:
+        app: kafka-strimzi-consumer2
+    spec:
+      containers:
+      - name: kafka-strimzi-consumer2
+        image: quay.io/zroubalik/kafka-app:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        env:
+          - name: BOOTSTRAP_SERVERS
+            value: my-cluster-kafka-bootstrap.kafka.svc:9092
+          - name: TOPIC
+            value: my-topic2
+        resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
+        command:
+        - /kafkaconsumerapp

@@ -1,0 +1,33 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: kafka-strimzi-consumer-scaledobject
+spec:
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 5
+  pollingInterval: 10
+  scaleTargetRef:
+    name: kafka-strimzi-consumer
+  advanced:
+    scalingModifiers:
+      formula: "(trig1 + trig2)"
+      target: "20"
+      activationTarget: "20"
+  triggers:
+  - type: apache-kafka
+    name: trig1
+    metadata:
+      topic: my-topic
+      bootstrapServers: my-cluster-kafka-bootstrap.kafka.svc:9092
+      consumerGroup: my-group
+      lagThreshold: '1'
+      offsetResetPolicy: 'latest'
+  - type: apache-kafka
+    name: trig2
+    metadata:
+      topic: my-topic2
+      bootstrapServers: my-cluster-kafka-bootstrap.kafka.svc:9092
+      consumerGroup: my-group
+      lagThreshold: '1'
+      offsetResetPolicy: 'latest'
