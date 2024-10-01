@@ -1,5 +1,5 @@
 # Sample applications that uses KEDA
-Source code for examples used in blog posts hosted at [https://www.kedify.io/blog](https://www.kedify.io/blog)
+Source code for examples used in blog posts hosted at [https://www.kedify.io/blog](https://www.kedify.io/blog), used in tutorials hosted at [https://www.kedify.io/tutorials](https://www.kedify.io/tutorials) and other sample applications around KEDA and Kedify.
 
 | Directory                              | Description                          | Used KEDA scalers                   |
 | -------------------------------------- | ------------------------------------ | ----------------------------------- |
