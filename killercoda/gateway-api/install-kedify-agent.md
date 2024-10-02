@@ -16,7 +16,6 @@ watch -n1 --color kubecolor --force-colors get deployments -nkeda
 Deployed KEDA should look similar to this, it may take around 1 to 2 minutes for all KEDA parts to become fully ready
 ```bash
 NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
-keda-add-ons-http-controller-manager   1/1     1            1           81s
 keda-add-ons-http-external-scaler      1/1     1            1           81s
 keda-add-ons-http-interceptor          1/1     1            1           81s
 keda-admission-webhooks                1/1     1            1           83s
