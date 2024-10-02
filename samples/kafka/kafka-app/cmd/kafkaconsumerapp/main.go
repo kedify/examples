@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/Shopify/sarama"
-	"github.com/zroubalik/keda-openshift-examples/kafka/kafka-app/internal/kafkaconsumer"
+	"github.com/kedify/examples/kafka/kafka-app/internal/kafkaconsumer"
 )
 
 func main() {

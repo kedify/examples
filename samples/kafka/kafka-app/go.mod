@@ -1,4 +1,4 @@
-module github.com/zroubalik/keda-openshift-examples/kafka/kafka-app
+module github.com/kedify/examples/kafka/kafka-app
 
 go 1.17
 

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/zroubalik/keda-openshift-examples/kafka/kafka-app/internal/kafkaproducer"
+	"github.com/kedify/examples/kafka/kafka-app/internal/kafkaproducer"
 )
 
 func main() {
