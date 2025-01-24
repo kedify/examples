@@ -42,7 +42,7 @@ kind: Ingress
 metadata:
   name: http-server
 spec:
-  #ingressClassName: "nginx"
+#  ingressClassName: "nginx"
   rules:
     - host: demo.keda
       http:

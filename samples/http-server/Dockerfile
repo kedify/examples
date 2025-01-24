@@ -1,6 +1,7 @@
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY go.mod .
+COPY go.sum .
 COPY main.go .
 COPY kedify-loves-keda.gif .
 RUN go build -o httpserver main.go
