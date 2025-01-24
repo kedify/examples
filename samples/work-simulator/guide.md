@@ -121,7 +121,7 @@ Alternatively, you can generate load locally by forwarding the application port 
    hey -z 2m -c 50 http://localhost:8080/work
    ```
 
-   - **`-m 2m`**: Number of minutes that we will send requests.
+   - **`-z 2m`**: Number of minutes that we will send requests.
    - **`-c 50`**: Number of concurrent workers.
 
    Or use a simple `curl` :
