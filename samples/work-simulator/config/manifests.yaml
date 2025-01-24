@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: work-simulator
+  labels:
+    app: work-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: work-simulator
+  template:
+    metadata:
+      labels:
+        app: work-simulator
+    spec:
+      containers:
+        - name: work-simulator
+          image: ghcr.io/kedify/sample-work-simulator:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MIN_SLEEP_MS
+              value: "100"   # Minimum sleep duration in milliseconds
+            - name: MAX_SLEEP_MS
+              value: "600"   # Maximum sleep duration in milliseconds
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: work-simulator
+  labels:
+    app: work-simulator
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  selector:
+    app: work-simulator

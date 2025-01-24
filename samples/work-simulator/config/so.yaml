@@ -1,0 +1,25 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: work-simulator-scaledobject
+  namespace: default
+spec:
+  scaleTargetRef:
+    kind: Deployment
+    name: work-simulator
+  pollingInterval: 5
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+        metricName: work_simulator_inprogress_tasks
+        query: sum(work_simulator_inprogress_tasks{job="work-simulator"})
+        threshold: "5"
