@@ -1,0 +1,73 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sleep-1
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: sleep-1
+  template:
+    metadata:
+      labels:
+        app: sleep-1
+    spec:
+      containers:
+        - name: sleep-1
+          image: ubuntu
+          imagePullPolicy: IfNotPresent
+          command:
+          - sleep
+          - inf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-keda-metric-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-keda-metric-1
+  template:
+    metadata:
+      labels:
+        app: test-keda-metric-1
+    spec:
+      containers:
+        - name: test-keda-metric-1
+          image: ubuntu
+          imagePullPolicy: IfNotPresent
+          command:
+          - sleep
+          - inf
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: app-1
+  labels:
+    scaling-group: cap-5
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sleep-1
+  cooldownPeriod: 5
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  fallback:
+    failureThreshold: 2
+    replicas: 1
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+  - type: kubernetes-workload
+    metadata:
+      podSelector: "app=test-keda-metric-1"
+      value: "1"
