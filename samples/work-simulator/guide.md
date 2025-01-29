@@ -102,7 +102,7 @@ kubectl apply -f config/load.yaml
 Monitor the scaling behavior:
 
 ```bash
-   watch kubectl get deployment work-simulator
+watch kubectl get deployment work-simulator
 ```
 
 ### Option 2: Port Forward and Generate Load Locally
