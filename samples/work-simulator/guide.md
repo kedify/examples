@@ -28,7 +28,7 @@ The Prometheus KEDA scaler is used for this setup. For more details, refer to th
    kubectl get pods -n monitoring
    ```
 
-   You should see running pods for Prometheus, Alertmanager, and Grafana.
+   You should see running pods for Prometheus, Alertmanager Grafana, and kube-state-metrics.
 
 ---
 
@@ -96,13 +96,13 @@ Simulate load using a Kubernetes Job. The job runs an image with `hey` tool to g
 Apply the job:
 
 ```bash
-kubectl apply -f load.yaml
+kubectl apply -f config/load.yaml
 ```
 
 Monitor the scaling behavior:
 
 ```bash
-watch kubectl get deployment work-simulator
+   watch kubectl get deployment work-simulator
 ```
 
 ### Option 2: Port Forward and Generate Load Locally

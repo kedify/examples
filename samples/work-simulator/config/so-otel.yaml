@@ -17,9 +17,14 @@ spec:
         scaleDown:
           stabilizationWindowSeconds: 5
   triggers:
-    - type: prometheus
+    # was type: prometheus
+    - type: kedify-otel
       metadata:
-        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
-        metricName: work_simulator_inprogress_tasks
-        query: sum(work_simulator_inprogress_tasks{job="work-simulator"})
-        threshold: "5"
+        # was serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+        scalerAddress: keda-otel-scaler.keda.svc:4318
+        
+        # was query: .., the PromQL query itself is the same
+        metricQuery: sum(work_simulator_inprogress_tasks{job="work-simulator"})
+        
+        # was threshold: "5"
+        targetValue: "5"
