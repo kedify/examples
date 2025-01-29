@@ -62,12 +62,12 @@ For our purposes we will be using one receiver (Prometheus). Not to be mistaken,
 part responsible for scraping the metrics. It has the same configuration style as full blown Prometheus config so one can 
 define static targets or dynamic scrape configs there ([receiver-docs](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/prometheusreceiver/README.md) & [promconfig-docs](https://github.com/prometheus/prometheus/blob/v2.28.1/docs/configuration/configuration.md#scrape_config)).
 
-This part of the configuration is important because it describes how the metric data are obtained. By using the Prometheus 
-receiver, we opted to use the pull model, but we could have also instrument our `work-simulator` with OTel sdk and send the 
+This part of the configuration is important because it describes how the metric data is obtained. By using the Prometheus 
+receiver, we opted to use the pull model, but we could have also instrumented our `work-simulator` with OTel sdk and send the 
 metric data, together with logs and traces, into OTel collector - push model.
 
 As for Prometheus CRDs (`PodMonitor` and `ServiceMonitor`), we can use the OTel Collector Operator together with their
-`TargetAllocator` [CRD](https://github.com/open-telemetry/opentelemetry-operator/blob/main/cmd/otel-allocator/README.md) (nice blogpost)[https://opentelemetry.io/blog/2024/prom-and-otel/#using-the-target-allocator]. However, the OTel Scaler doesn't support the operator at the moment so let's achieve the same goal with dynamic scrape target.
+`TargetAllocator` [CRD](https://github.com/open-telemetry/opentelemetry-operator/blob/main/cmd/otel-allocator/README.md) [nice blogpost](https://opentelemetry.io/blog/2024/prom-and-otel/#using-the-target-allocator). However, the OTel Scaler doesn't support the operator at the moment so let's achieve the same goal with dynamic scrape target.
 That is the
 
 ```yaml
@@ -78,7 +78,7 @@ That is the
                   regex: "true"
                   action: keep
 ```
-part in the Prometheus receiver's config. It will be collecting metrics from all pods that have label called `prometheus.io/scrape: "true"` on them. So let us add the label on the deployment:
+part in the Prometheus receiver's config. It will be collecting metrics from all pods that have annotation called `prometheus.io/scrape: "true"` on them. So let us add the annotation on the deployment's pod template:
 
 ```
 kubectl patch deploy work-simulator --type=merge -p '{"spec":{"template": {"metadata":{"annotations": {"prometheus.io/scrape":"true"}}}}}'
