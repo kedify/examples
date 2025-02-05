@@ -2,19 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sleep-2
+  name: app-2
 spec:
   replicas: 0
   selector:
     matchLabels:
-      app: sleep-2
+      app: app-2
   template:
     metadata:
       labels:
-        app: sleep-2
+        app: app-2
     spec:
       containers:
-        - name: sleep-2
+        - name: app-2
           image: ubuntu
           imagePullPolicy: IfNotPresent
           command:
@@ -53,9 +53,9 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: sleep-2
+    name: app-2
   cooldownPeriod: 5
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: 10
   fallback:
     failureThreshold: 2
