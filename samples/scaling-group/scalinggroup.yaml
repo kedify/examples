@@ -3,7 +3,7 @@ kind: ScalingGroup
 metadata:
   name: max-group
 spec:
-  capacity: 5
+  capacity: 2
   selector:
     matchLabels:
       scaling-group: cap-5
