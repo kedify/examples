@@ -2,7 +2,7 @@
 
 This is an example usage of a kedify `ScalingGroup` feature to enforce a limit on scaling shared among a group of `ScaledObjects`.
 
-Currently, the feature is guarded by feature flag, to enable this set following env var on a `keda-operator`.
+Currently, the feature is guarded by feature flag. To enable this, set the following env var on a `keda-operator`.
 ```
 $ kubectl --namespace=keda set env deployment/keda-operator KEDIFY_ENABLED_SCALINGGROUPS=true
 ```
@@ -23,7 +23,7 @@ max-group   2          2                  0
 ```
 
 Provided are two applications with `ScaledObject` that match the group selector, both applications use `kubernetes-workload` scaler
-which makes arbitrary scaling for testing easily possible. Lets deploy first one
+which makes arbitrary scaling for testing easily possible. Let's deploy the first one
 ```
 $ kubectl apply -f so1.yaml
 ```
@@ -50,7 +50,7 @@ max-group   2          1                  1
 ```
 
 At this point there is no need to cap any metrics because the total sum of replicas across all member `ScaledObjects` is below
-the group capacity. We can try to change that with increasing the underlying metric source for the `ScaledObject`
+the group capacity. We can try to change that by increasing the underlying metric source for the `ScaledObject`
 ```
 $ kubectl scale deployment test-keda-metric-1 --replicas=5
 ```
@@ -84,10 +84,10 @@ added to a group and second from `sg-metrics-processor` about metric being cappe
 
 ### Overprovisioning Recovery
 
-Now when the group is at max capacity, adding a new `ScaledObject` would result in overprovisioning. There is a built in algorithm to
+Now when the group is at max capacity, adding a new `ScaledObject` would result in overprovisioning. There is a built-in algorithm to
 gradually and eventually decrease metrics for `ScaledObjects` in the overprovisioned group to try to satisfy the group capacity.
 
-Lets create second autoscaled application, it is a mirror of the `app-1`, similar deployments, similar scaling triggers, only called `app-2`.
+Let's create a second autoscaled application, it is a mirror of the `app-1`, similar deployments, similar scaling triggers, only called `app-2`.
 ```
 $ kubectl apply -f so2.yaml
 ```
