@@ -4,7 +4,7 @@ This is an example usage of a kedify `ScalingGroup` feature to enforce a limit o
 
 Currently, the feature is guarded by feature flag. To enable this, set the following env var on a `keda-operator`.
 ```
-$ kubectl --namespace=keda set env deployment/keda-operator KEDIFY_ENABLED_SCALINGGROUPS=true
+$ kubectl --namespace=keda set env deployment/keda-operator KEDIFY_SCALINGGROUPS_ENABLED=true
 ```
 
 ### Basic Group Capacity
