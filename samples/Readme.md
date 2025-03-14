@@ -11,6 +11,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 | [stable-diffusion](./stable-diffusion)    | This application demonstrates scaling AI workloads that runs on GPU-enabled nodes based on a job queue pattern | RabbitMQ Queue |
 | [websocket-server](./websocket-server)    | This application can be scaled by incoming Websocket traffic | Kedify HTTP |
 | [work-simulator](./work-simulator)        | This application simulates work tasks and can be scaled based on custom Prometheus metrics | Prometheus |
+| [scaling-group](./scaling-group)          | This example demonstrates how to limit scaling of a group of ScaledObjects with ScalingGroup | Kedify |
 
 
 # Externally located sample applications that use KEDA
