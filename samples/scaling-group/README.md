@@ -19,7 +19,7 @@ so the status should look similar to this:
 ```
 $ kubectl get sg
 NAME        CAPACITY   RESIDUALCAPACITY   MEMBERCOUNT
-max-group   2          2                  0
+max-group   5          5                  0
 ```
 
 Provided are two applications with `ScaledObject` that match the group selector, both applications use `kubernetes-workload` scaler
@@ -46,13 +46,13 @@ The controller for scaling groups will adjust the `ScalingGroup` status
 ```
 $ kubectl get sg
 NAME        CAPACITY   RESIDUALCAPACITY   MEMBERCOUNT
-max-group   2          1                  1
+max-group   5          4                  1
 ```
 
 At this point there is no need to cap any metrics because the total sum of replicas across all member `ScaledObjects` is below
 the group capacity. We can try to change that by increasing the underlying metric source for the `ScaledObject`
 ```
-$ kubectl scale deployment test-keda-metric-1 --replicas=5
+$ kubectl scale deployment test-keda-metric-1 --replicas=7
 ```
 
 Without the scaling group in place, this would result in `app-1` scaled to 5 replicas as well, but because capacity for the `max-group`
@@ -61,8 +61,8 @@ is 2, the `app-1` won't be allowed to scale past that.
 ```
 $ kubectl get deployments
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-app-1                2/2     2            2           19s
-test-keda-metric-1   5/5     5            5           19s
+app-1                5/5     5            5           19s
+test-keda-metric-1   7/7     7            7           19s
 ```
 
 There is going to be an event regarding the metric cap on the `ScaledObject`
@@ -77,7 +77,7 @@ Events:
   Normal  KEDAScalersStarted        24s   keda-operator               Started scalers watch
   Normal  ScaledObjectReady         24s   keda-operator               ScaledObject is ready for scaling
   Normal  KEDAScaleTargetActivated  24s   keda-operator               Scaled apps/v1.Deployment default/app-1 from 0 to 1, triggered by kubernetesWorkloadScaler
-  Normal  MetricsCapped             17s   sg-metrics-processor        Metrics capped: [s0-workload-default(5 => 2)] due to ScalingGroup max-group
+  Normal  MetricsCapped             17s   sg-metrics-processor        Metrics capped: [s0-workload-default(7 => 5)] due to ScalingGroup max-group
 ```
 There are well known events from `keda-operator` and also two new. One from `sg-scaledobject-controller` regarding `ScaledObject` being
 added to a group and second from `sg-metrics-processor` about metric being capped to satisfy group capacity.
@@ -95,9 +95,9 @@ The group will become overprovisioned as soon as the HPA status is populated
 ```
 $ kubectl get sg -w
 NAME        CAPACITY   RESIDUALCAPACITY   MEMBERCOUNT
-max-group   2          0                  1
-max-group   2          0                  2
-max-group   2          -1                 2
+max-group   5          0                  1
+max-group   5          0                  2
+max-group   5          -1                 2
 ```
 The `RESIDUALCAPACITY` of a group is calculated as `CAPACITY` minus sum of all `HPA` desired replica counts as reported in the status.
 After this instance, there is an overprovisioning recovery algorithm that will report even lower than the capped metric with some probability.
@@ -110,13 +110,13 @@ At some point, the group will stabilize without overprovisioning, because scalin
 ```
 $ kubectl get sg -w
 NAME        CAPACITY   RESIDUALCAPACITY   MEMBERCOUNT
-max-group   2          0                  2
+max-group   5          0                  2
 
 $ kubectl get deployments.apps
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-app-1                1/1     1            1           1m
+app-1                4/4     1            1           1m
 app-2                1/1     1            1           21s
-test-keda-metric-1   5/5     5            5           1m
+test-keda-metric-1   7/7     5            5           1m
 test-keda-metric-2   1/1     1            1           21s
 ```
 
@@ -129,15 +129,15 @@ Let's observe how group status changes
 ```
 $ kubectl get sg -w
 NAME        CAPACITY   RESIDUALCAPACITY   MEMBERCOUNT
-max-group   10         8                  2
-max-group   10         4                  2
+max-group   10         5                  2
+max-group   10         2                  2
 ```
 The `app-1` is no longer capped and can scale out to what the underlying metric is reporting
 ```
 $ kubectl get deployments.apps
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-app-1                5/5     5            5           2m
+app-1                7/7     7            7           2m
 app-2                1/1     1            1           1m
-test-keda-metric-1   5/5     5            5           2m
+test-keda-metric-1   7/7     7            7           2m
 test-keda-metric-2   1/1     1            1           1m
 ```
