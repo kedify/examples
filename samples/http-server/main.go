@@ -3,17 +3,26 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+type DelayConfig struct {
+	FixedDelay time.Duration
+	IsRange    bool
+	MinDelay   float64
+	MaxDelay   float64
+}
+
 var (
-	// Define a counter metric for the root and image handlers
 	requests = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -21,19 +30,49 @@ var (
 		},
 		[]string{"endpoint"},
 	)
+	delayHistogram prometheus.Histogram
+	cfg            DelayConfig
+	rng            = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 func init() {
-	// Register custom metrics with Prometheus
 	prometheus.MustRegister(requests)
+	var err error
+	cfg, err = parseDelay()
+	if err != nil {
+		log.Printf("Error parsing delay: %v", err)
+	}
+	var buckets []float64
+	if cfg.IsRange {
+		// For a range, use 10 buckets covering the specified range.
+		start := cfg.MinDelay
+		width := (cfg.MaxDelay - cfg.MinDelay) / 10.0
+		buckets = prometheus.LinearBuckets(start, width, 10)
+	} else {
+		// For a fixed delay or no delay, use just one bucket.
+		// If a fixed delay is set, use its value as the boundary; otherwise default to 0.
+		var boundary float64
+		if cfg.FixedDelay > 0 {
+			boundary = float64(cfg.FixedDelay) / float64(time.Second)
+		} else {
+			boundary = 0
+		}
+		buckets = []float64{boundary}
+	}
+	delayHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "response_delay_seconds",
+		Help:    "Distribution of response delays in seconds",
+		Buckets: buckets,
+	})
+	prometheus.MustRegister(delayHistogram)
 }
 
 func main() {
-	delay := getDelay()
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		requests.WithLabelValues("/").Inc() // Increment the counter for root endpoint
+		requests.WithLabelValues("/").Inc()
 		fmt.Println("Received request from", r.RemoteAddr)
+		delay := getDelay()
+		delayHistogram.Observe(delay.Seconds())
 		time.Sleep(delay)
 		w.Header().Set("Content-Type", "text/html")
 		htmlContent := `
@@ -60,27 +99,80 @@ func main() {
 	})
 
 	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
-		requests.WithLabelValues("/image").Inc() // Increment the counter for image endpoint
+		requests.WithLabelValues("/image").Inc()
+		delay := getDelay()
+		delayHistogram.Observe(delay.Seconds())
 		time.Sleep(delay)
 		http.ServeFile(w, r, "kedify-loves-keda.gif")
 	})
 
-	// Expose the default Prometheus metrics at `/metrics` endpoint
+	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		requests.WithLabelValues("/echo").Inc()
+		delay := getDelay()
+		delayHistogram.Observe(delay.Seconds())
+		time.Sleep(delay)
+		w.Header().Set("Content-Type", "text/plain")
+		dump, err := httputil.DumpRequest(r, true)
+		if err != nil {
+			fmt.Fprintf(w, "Error dumping request: %v", err)
+			return
+		}
+		w.Write(dump)
+	})
+
 	http.Handle("/metrics", promhttp.Handler())
 
-	fmt.Println("Server is running on http://localhost:8080")
+	delayDesc := "no delay"
+	if cfg.IsRange {
+		delayDesc = fmt.Sprintf("random delay between %.2f and %.2f seconds", cfg.MinDelay, cfg.MaxDelay)
+	} else if cfg.FixedDelay > 0 {
+		delayDesc = fmt.Sprintf("fixed delay of %.2f seconds", float64(cfg.FixedDelay)/float64(time.Second))
+	}
+	fmt.Printf("Server is running on http://localhost:8080 with %s\n", delayDesc)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func getDelay() time.Duration {
+// parseDelay parses the RESPONSE_DELAY environment variable to set a fixed delay or a range of delays.
+// If the variable is not set, no delay is applied.
+// If the variable is set to a single value, that value is used as a fixed delay.
+// If the variable is set to a range (e.g., "1-5"), a random delay within that range is applied.
+// The delay is specified in seconds.
+func parseDelay() (DelayConfig, error) {
+	var c DelayConfig
 	delayStr := os.Getenv("RESPONSE_DELAY")
 	if delayStr == "" {
-		return 0
+		return c, nil
 	}
-	delay, err := strconv.ParseFloat(delayStr, 64)
-	if err != nil {
-		log.Printf("Invalid delay value: %v", err)
-		return 0
+	if strings.Contains(delayStr, "-") {
+		c.IsRange = true
+		parts := strings.Split(delayStr, "-")
+		if len(parts) != 2 {
+			return c, fmt.Errorf("invalid delay range format: %s", delayStr)
+		}
+		minVal, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+		maxVal, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		if err1 != nil || err2 != nil {
+			return c, fmt.Errorf("invalid delay range values: %s", delayStr)
+		}
+		if minVal > maxVal {
+			return c, fmt.Errorf("invalid delay range: min %v > max %v", minVal, maxVal)
+		}
+		c.MinDelay = minVal
+		c.MaxDelay = maxVal
+	} else {
+		d, err := strconv.ParseFloat(delayStr, 64)
+		if err != nil {
+			return c, fmt.Errorf("invalid delay value: %v", err)
+		}
+		c.FixedDelay = time.Duration(d * float64(time.Second))
 	}
-	return time.Duration(delay * float64(time.Second))
+	return c, nil
+}
+
+func getDelay() time.Duration {
+	if cfg.IsRange {
+		chosen := cfg.MinDelay + rng.Float64()*(cfg.MaxDelay-cfg.MinDelay)
+		return time.Duration(chosen * float64(time.Second))
+	}
+	return cfg.FixedDelay
 }

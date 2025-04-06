@@ -1,6 +1,27 @@
 # HTTP Server
 
-This is a simple HTTP server in Go deployable in Kubernetes. The server accepts HTTP requests and responds accordingly. It also supports an optional delay in response, configurable via an environment variable.
+This is a simple HTTP server in Go designed for Kubernetes deployments. It accepts HTTP requests and responds accordingly while providing configurable response delays and exposing useful metrics for monitoring.
+
+## Features
+
+- **Configurable Response Delay**  
+  The server supports an optional delay in responses. Set the `RESPONSE_DELAY` environment variable to introduce a delay:
+  - **Fixed delay:** Set a single value (e.g., `"0.3"`) for a constant delay.
+  - **Dynamic delay (range):** Set a range (e.g., `"1.5-3.7"`) to have the server randomly select a delay uniformly between the two values.
+
+- **Endpoints**  
+  The server exposes multiple endpoints:
+  - `/`  
+    Returns an HTML page with an image.
+  - `/image`  
+    Serves the image file.
+  - `/echo`  
+    Echoes back the incoming HTTP request (including headers and body) as plain text.
+  - `/metrics`  
+    Exposes Prometheus metrics:
+    - **http_requests_total:** A counter that tracks the total number of requests per endpoint.
+    - **response_delay_seconds:** A histogram capturing the distribution of response delays in seconds.
+
 
 ### Build and Push Images
 
@@ -35,6 +56,12 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
      value: "0.3"
    ```
    This example introduces a 0.3-second delay in each response.
+
+      ```yaml
+   - name: RESPONSE_DELAY
+     value: "0.5-10"
+   ```
+   This example introduces a random delay between 0.5 and 10 seconds.
 
 4. **Test the HTTP Server**:
 
