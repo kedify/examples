@@ -1,0 +1,114 @@
+# Service internal autowiring example
+#
+# kubectl run curl --image=curlimages/curl:latest --restart=Never --command -- /bin/sh -c "sleep infinity"
+# kubectl exec -it curl -- sh 
+#
+# curl -I -H 'host: server-service.keda' http://server-service.default.svc.cluster.local:8080
+#
+# kubectl run hey --image=ghcr.io/kedacore/tests-hey:latest --restart=Never --command -- /bin/sh -c "sleep infinity"
+# kubectl exec -it hey -- sh
+#
+# ./hey -n 10000 -c 150 -host "server-service.keda" http://server-service.default.svc.cluster.local:8080
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: server-service
+  template:
+    metadata:
+      labels:
+        app: server-service
+    spec:
+      containers:
+        - name: server-service
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: RESPONSE_DELAY
+              value: "0.3"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-service
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-service-fallback
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+  selector:
+    app: server-service
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: server-service
+spec:
+  rules:
+    - host: server-service.keda
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: server-service
+                port:
+                  number: 8080
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: server-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: server-service
+  cooldownPeriod: 5
+  minReplicaCount: 1
+  maxReplicaCount: 1
+  fallback:                                       
+    failureThreshold: 2           
+    replicas: 1
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: server-service.keda
+      service: server-service
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1000"
+      granularity: 1s
+      window: 10s
+      trafficAutowire: service
+      fallbackService: server-service-fallback
