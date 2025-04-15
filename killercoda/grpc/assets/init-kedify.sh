@@ -23,7 +23,7 @@ fi
 
 # install kedify plugin
 if [[ ! -f /.krew/bin/kubectl-kedify ]]; then
-    kubectl krew install --manifest-url=https://github.com/kedify/kubectl-kedify/raw/main/.krew.yaml
+    kubectl krew install --manifest-url=https://github.com/kedify/kubectl-kedify/raw/v0.0.4/.krew.yaml
     echo 'export PATH="/.krew/bin:$PATH"' >> ~/.bashrc
 fi
 
