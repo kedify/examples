@@ -16,7 +16,7 @@ if [[ ! -f /usr/bin/bat ]]; then
     ln -s /usr/bin/batcat /usr/bin/bat
 fi
 if [[ ! -f /usr/bin/kubecolor ]]; then
-    wget -O /tmp/kubecolor.tar.gz https://github.com/hidetatz/kubecolor/releases/download/v0.0.25/kubecolor_0.0.25_Linux_x86_64.tar.gz
+    wget -O /tmp/kubecolor.tar.gz https://github.com/kubecolor/kubecolor/releases/download/v0.5.0/kubecolor_0.5.0_linux_amd64.tar.gz
     ( cd /tmp && tar -xzf kubecolor.tar.gz )
     mv /tmp/kubecolor /usr/bin/kubecolor
 fi
