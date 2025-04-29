@@ -1,6 +1,6 @@
 # HTTP Server
 
-This is a simple HTTP server in Go designed for Kubernetes deployments. It accepts HTTP requests and responds accordingly while providing configurable response delays and exposing useful metrics for monitoring.
+This is a simple HTTP server in Go designed for Kubernetes deployments. It accepts HTTP and HTTPS requests and responds accordingly while providing configurable response delays and exposing useful metrics for monitoring.
 
 ## Features
 
@@ -80,5 +80,85 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
 6. **Test Higher Load (to trigger autoscaling)**:
 
    ```bash
-   hey -n 200000 -c 100 -host "demo.keda" http://localhost:9080
+   hey -n 100000 -c 100 -host "demo.keda" http://localhost:9080
    ```
+
+### Deploy in k3d with TLS and NGINX Ingress
+
+You can run the HTTP server with TLS enabled behind the NGINX ingress controller using `TLS_ENABLED=true` and Kubernetes secrets for certificate management.
+
+1. **Create a k3d Cluster with NGINX**:
+
+  Create k3d cluster with disabled Traefik ingress controller:
+  
+  ```bash
+  k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg   "--disable=traefik@server:*"
+  ```
+  
+  Install the NGINX ingress controller:
+  
+  ```bash
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+  helm repo update
+  
+  helm install nginx-ingress ingress-nginx/ingress-nginx \
+    --namespace nginx-ingress \
+    --create-namespace \
+    --set controller.publishService.enabled=true \
+    --set controller.service.type=LoadBalancer
+  ```
+
+2. **Generate and Apply TLS Certificates**:
+
+  For development, you can use self-signed certs:
+  
+  ```bash
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout certs/tls.key -out certs/tls.crt \
+    -subj "/CN=tls-demo.keda/O=tls-demo.keda"
+  
+  kubectl create secret tls http-server-tls --cert=certs/tls.crt --key=certs/tls.key
+  ```
+
+3. **Deploy the Server with TLS Enabled**:
+
+  Update your deployment to include:
+  
+  ```yaml
+  - name: TLS_ENABLED
+    value: "true"
+  - name: TLS_CERT_FILE
+    value: "/certs/tls.crt"
+  - name: TLS_KEY_FILE
+    value: "/certs/tls.key"
+  ```
+  
+  Apply your deployment and ingress manifests:
+  
+  ```bash
+  kubectl apply -f config/tls-manifests.yaml
+  ```
+
+4. **Test TLS with Host Header**:
+
+  ```bash
+  curl -H "Host: tls-demo.keda" -vk https://localhost:9443/
+  ```
+
+  **Note:** If you’re using self-signed certs you’ll need to tell `curl` to skip verification:
+
+  ```bash
+  curl -H "Host: tls-demo.keda" -k https://localhost:9443/
+  ```
+
+5. **Enable Autoscaling (TLS version)**:
+
+  ```bash
+  kubectl apply -f config/tls-so.yaml
+  ```
+
+6. **Test Higher Load (to trigger autoscaling)**:
+
+  ```bash
+  hey -n 100000 -c 100 -host "tls-demo.keda" https://localhost:9443/
+  ```
