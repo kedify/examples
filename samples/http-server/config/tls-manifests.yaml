@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: http-server-tls
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRVENDQWltZ0F3SUJBZ0lVRjlzM3dWNklsUk1oUlFvdWlDZ3p1eWZhdmY0d0RRWUpLb1pJaHZjTkFRRUwKQlFBd01ERVdNQlFHQTFVRUF3d05kR3h6TFdSbGJXOHVhMlZrWVRFV01CUUdBMVVFQ2d3TmRHeHpMV1JsYlc4dQphMlZrWVRBZUZ3MHlOVEEwTWprd056RXdNekZhRncweU5qQTBNamt3TnpFd016RmFNREF4RmpBVUJnTlZCQU1NCkRYUnNjeTFrWlcxdkxtdGxaR0V4RmpBVUJnTlZCQW9NRFhSc2N5MWtaVzF2TG10bFpHRXdnZ0VpTUEwR0NTcUcKU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRQ3cxUFBnT0hjTWFaRnNjWGJvRzlTMnVIeG5MaU5qdXhudApXUDFDMnBEWExFTERVZml5Q2NNTlowaFd1QWtOa3d3T0tXL25QODVPTXpvS1NDaTZ0eEg3UzE0ZTc0SVVudGRaCmFGNnMzdXBjS21WbXhKb1FTaFUxVWJJcmJ5d2xBUFlMSTNuUXdURlFPbXY4NkdsYk9sZDNTSkI4RU91aUIrL0oKR0NCTXhUMVN0K3dIUElVTERzOWJmMHY2UU81bk14d2ZyOEJHRHlRYlFRUW43RVhNN0ZlVnZyT3h2UWhET3pDZQp3U2luZmtvRXU4VXI1OTVUODRaMmxobHN1bFM4UjNHN0NyUjV5cXpVZ3JFbkRTaXYydms1THhQYVBUQ3l2WXNTCjl1L0tKWE5pWUxzVXY4QSs0MS9uOFRzMzJkQnhhVTNsZUhUOFNyQjc5UFZ3OFg3dGttbmxBZ01CQUFHalV6QlIKTUIwR0ExVWREZ1FXQkJSWmxmMVJPQVV4eUxndTNXWFBYLzZLT0x3UDBEQWZCZ05WSFNNRUdEQVdnQlJabGYxUgpPQVV4eUxndTNXWFBYLzZLT0x3UDBEQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01BMEdDU3FHU0liM0RRRUJDd1VBCkE0SUJBUUNsZnlqNmhsZ3FPaEFBZmlSZUNlUkxFdXkzYjFlUFplRTJmb3VqQkRKcjdGM3Q1aHgvUUViaWl4TDQKQm9wRzZDYUM0ZmhmWEMyUy85U3NzOTNsVHFhNlQxSWVhdVF4U3dUL1ArTGRVckVhSG5lQnlTN2EwYWdaMUpVbQpYWHJGMEFNVUYrVGRPRW1lZzEyM1RZajNJcWNORFNxUCtINDY1Y3dFTStZa003TVNGUlNOMUVac0ZFZGQ1MFBlCms4Q1JUSUdDVjZzdDFpYlBRTFdVaFBEN0pSdDd0UnhMbXh5amx2bit5Q0oySlBac3NzNDJpK0dENlFxbjVGVEsKY08zRTFNZlRHTmZBU2dtTnNDOTRINXVOVkdQVVdSSGxvekkxR0FVMjF1QkRrVkI0dm5zaDFzZmVEZDVicWZnawoxK2FyQkdIWWRRNnplNVkrL3J2RiswZk91V1VxCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQ3cxUFBnT0hjTWFaRnMKY1hib0c5UzJ1SHhuTGlOanV4bnRXUDFDMnBEWExFTERVZml5Q2NNTlowaFd1QWtOa3d3T0tXL25QODVPTXpvSwpTQ2k2dHhIN1MxNGU3NElVbnRkWmFGNnMzdXBjS21WbXhKb1FTaFUxVWJJcmJ5d2xBUFlMSTNuUXdURlFPbXY4CjZHbGJPbGQzU0pCOEVPdWlCKy9KR0NCTXhUMVN0K3dIUElVTERzOWJmMHY2UU81bk14d2ZyOEJHRHlRYlFRUW4KN0VYTTdGZVZ2ck94dlFoRE96Q2V3U2luZmtvRXU4VXI1OTVUODRaMmxobHN1bFM4UjNHN0NyUjV5cXpVZ3JFbgpEU2l2MnZrNUx4UGFQVEN5dllzUzl1L0tKWE5pWUxzVXY4QSs0MS9uOFRzMzJkQnhhVTNsZUhUOFNyQjc5UFZ3CjhYN3RrbW5sQWdNQkFBRUNnZ0VBRzRNZWFIblFoK1ZhNDJEcDY2WDgyK3JyTEJDQklCQ3BzWVJoYndmYmRpYmsKUWtoY0piTWdIbE05N1lRWG9IMks2QjhwVW5UYWI4OUhqZmI1STBlOWEvZ25iaSs4Y09IZnhvRFhEaFZtcUMxTwpkb1ZMSlJLcHB4Q05aSFdaREM3UW1SNE5ZMTNUZ3RSOEhhNjVTYURUbi9MeHkrUEVEWU1ubXdWK2JRTlpEYWZlCnVPV0RhMGFNUTEvWnN1YnhwdlJVSmxzdmF1VzVPY2txcGVRWHIyaU51bktTRHlmSzJ6Y0NIM0RIMCtwMVhHZ2cKUjN3b1NCbmNwdFlERGNZT3c3dnNmSGRCdG1QdXlaU3pWNE5aRVZZVFl6VVZ6dzZIWEE5b1AxZDdCRGFXdThyUApBMXR3ZjRyczJqWWk4bVhTT0s0aW5KcldnWVIvV1hsdG1meVlONzQrUVFLQmdRRGNoVE5uNG5Xd2RSU21WQzE1CkxSOUtQNkpoK0ZVUjNBcnFla3NYZlFackErbjN2MmRMbUlmbTFIMzdVRFArQzZjTDVUTWtnc01nRjBLWHZ3R1MKRXQwVFkzNzVwNWZMZEZOaHlTUXdOemI5MGtYZjU3SlJpd1VRRXFrREdxOUEyb3daV1MxL0JtVXNVWENhSWtVZgpaWU5RR2hyMFdWSEN6SkI2MkdBQStXSHhSUUtCZ1FETlNFODZsc0Vnang0dTB6MUNWcFlsVm04cUd0VUZLb2F4CnYyL09oN3EyVFRUK0wxS2NaRnJhcUNIaEF3WnRNVVVjdFZQVkk2WDBtTHA3K09OaitpM0xEbnEzTFV0cTdCUlMKZ3luZWlBMXNvM0diWWg3YU9DOFRteEdTVy8zelRXNXoyOUp1Vm5qazR6M0E4WnZiUnAwcGhpOWtMbzJBRzV1VwpDaWlROEVZUUlRS0JnSDBsMXZPbzhKT1JEb1FLbDdnQ1pKU1Zvb2twRHRaUTQ1MEloRjh6SkJaTnBWVmx1YkNNClF1dzhRYmNEWUU1WHZKaWluYkNseVNrSUtsSEdJNVVMd1kxRVZRWklGM3h1YXZlKzJCdkk2aHVJWHdGZ0U3SDEKVEkwL21jMWFNb1dDd2ltTWs2WllNY2pCK3o1dUhuNWY5UExicmRwb2FsODhDdTY4cDFkR01GQmxBb0dBRndkZAptL3o5ZldHUXlULzVSMC9mV0NEeUo0OExCcUZXcXVvRzZPeGhEY0pyaDNoWGxDUE43V21mSTFicmlhUlZWSHNqCkJHNFRWL1VxTm00ZFZFSGtrVHIybVVZRGgrTWtCSDJpWE14MmRSR0ExU1dVd0hZOUViMzdvcWVmUFlRYU4vVVoKRGplMUtEZzEzVWM5Yk1QbkxabFlCNjBSUXFYV05tYTlWa1VlRndFQ2dZQS9KRkdwSmZ5cWt2a0sydlQzWm5VQgpDTWwwcGtOVXNvZGNzNHdUOHJBNC9INnptV2V1SVI1RHBTODRSMERtUktkVzFFRWhLNm5pMGZVS0FWWHdTZGd3CmRsUVdwZ1JvL2VxNkYyOTZzaVo0QzJFY1g5OXpwb1hVOWN5MDZKeHZ4dWlha2hFbS9NSDdYaTFEdlRTUWRJLzkKS25Jc3dPa01oazdranFZZE5qTTdEQT09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-server-tls
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-server-tls
+  template:
+    metadata:
+      labels:
+        app: http-server-tls
+    spec:
+      containers:
+        - name: http-server
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          env:
+            - name: RESPONSE_DELAY
+              value: "0.3"
+            - name: TLS_ENABLED
+              value: "true"
+            - name: TLS_CERT_FILE
+              value: "/certs/tls.crt"
+            - name: TLS_KEY_FILE
+              value: "/certs/tls.key"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: "/certs"
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: http-server-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-server-tls
+spec:
+  ports:
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8443
+  selector:
+    app: http-server-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-server-tls
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - tls-demo.keda
+      secretName: http-server-tls
+  rules:
+    - host: tls-demo.keda
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-server-tls
+                port:
+                  number: 443

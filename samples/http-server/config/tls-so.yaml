@@ -1,0 +1,32 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: http-server-tls
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: http-server-tls
+  cooldownPeriod: 5
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  fallback:
+    failureThreshold: 2
+    replicas: 1
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: tls-demo.keda
+      service: http-server-tls
+      port: "443"
+      scalingMetric: requestRate
+      targetValue: "10"
+      granularity: 1s
+      window: 10s
+      tlsSecretName: http-server-tls
