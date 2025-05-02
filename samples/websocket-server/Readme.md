@@ -44,7 +44,7 @@ This should work with a default k3d cluster and Traefik ingress controller
 
 5. **Enable Auto Scaling**:
 
-   Currently only the [Envoy proxy `kedify-proxy` fleet supports WebSocket upgrade](https://github.com/kedify/http-add-on/pull/42), the [interceptor WebSocket support is still in progress](https://github.com/kedacore/http-add-on/pull/835).
+   The WebSocket scale to zero is also supported.
 
    ```bash
    kubectl apply -f ./config/so.yaml
