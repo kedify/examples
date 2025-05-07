@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"math/rand"
@@ -37,11 +38,13 @@ var (
 
 func init() {
 	prometheus.MustRegister(requests)
+
 	var err error
 	cfg, err = parseDelay()
 	if err != nil {
 		log.Printf("Error parsing delay: %v", err)
 	}
+
 	var buckets []float64
 	if cfg.IsRange {
 		// For a range, use 10 buckets covering the specified range.
@@ -59,6 +62,7 @@ func init() {
 		}
 		buckets = []float64{boundary}
 	}
+
 	delayHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "response_delay_seconds",
 		Help:    "Distribution of response delays in seconds",
@@ -68,59 +72,25 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		requests.WithLabelValues("/").Inc()
-		fmt.Println("Received request from", r.RemoteAddr)
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		w.Header().Set("Content-Type", "text/html")
-		htmlContent := `
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<title>Kedify <3 KEDA!</title>
-				<style>
-					body, html {
-						height: 100%;
-						margin: 0;
-						display: flex;
-						justify-content: center;
-						align-items: center;
-					}
-				</style>
-			</head>
-			<body>
-				<div><img src='/image'></div>
-			</body>
-			</html>
-		`
-		fmt.Fprint(w, htmlContent)
-	})
+	tlsEnabled := os.Getenv("TLS_ENABLED") == "true"
+	certFile := os.Getenv("TLS_CERT_FILE")
+	keyFile := os.Getenv("TLS_KEY_FILE")
 
-	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
-		requests.WithLabelValues("/image").Inc()
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		http.ServeFile(w, r, "kedify-loves-keda.gif")
-	})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", homeHandler)
+	mux.HandleFunc("/image", imageHandler)
+	mux.HandleFunc("/echo", echoHandler)
+	mux.Handle("/metrics", promhttp.Handler())
 
-	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-		requests.WithLabelValues("/echo").Inc()
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		w.Header().Set("Content-Type", "text/plain")
-		dump, err := httputil.DumpRequest(r, true)
-		if err != nil {
-			fmt.Fprintf(w, "Error dumping request: %v", err)
-			return
-		}
-		w.Write(dump)
-	})
+	addr := ":8080"
+	if tlsEnabled {
+		addr = ":8443"
+	}
 
-	http.Handle("/metrics", promhttp.Handler())
+	server := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
 
 	delayDesc := "no delay"
 	if cfg.IsRange {
@@ -128,8 +98,85 @@ func main() {
 	} else if cfg.FixedDelay > 0 {
 		delayDesc = fmt.Sprintf("fixed delay of %.2f seconds", float64(cfg.FixedDelay)/float64(time.Second))
 	}
-	fmt.Printf("Server is running on http://localhost:8080 with %s\n", delayDesc)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Printf("Server is running on %s with %s (TLS: %v)\n", addr, delayDesc, tlsEnabled)
+
+	if tlsEnabled {
+		if certFile == "" || keyFile == "" {
+			log.Fatal("TLS_ENABLED=true but TLS_CERT_FILE or TLS_KEY_FILE not set")
+		}
+		tlsConfig, err := loadTLSConfig(certFile, keyFile)
+		if err != nil {
+			log.Fatalf("Failed to load TLS config: %v", err)
+		}
+		server.TLSConfig = tlsConfig
+		log.Fatal(server.ListenAndServeTLS(certFile, keyFile))
+	} else {
+		log.Fatal(server.ListenAndServe())
+	}
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	requests.WithLabelValues("/").Inc()
+	fmt.Println("Received request from", r.RemoteAddr)
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	w.Header().Set("Content-Type", "text/html")
+	htmlContent := `
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>Kedify <3 KEDA!</title>
+			<style>
+				body, html {
+					height: 100%;
+					margin: 0;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+				}
+			</style>
+		</head>
+		<body>
+			<div><img src='/image'></div>
+		</body>
+		</html>
+	`
+	fmt.Fprint(w, htmlContent)
+}
+
+func imageHandler(w http.ResponseWriter, r *http.Request) {
+	requests.WithLabelValues("/image").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	http.ServeFile(w, r, "kedify-loves-keda.gif")
+}
+
+func echoHandler(w http.ResponseWriter, r *http.Request) {
+	requests.WithLabelValues("/echo").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	w.Header().Set("Content-Type", "text/plain")
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Fprintf(w, "Error dumping request: %v", err)
+		return
+	}
+	w.Write(dump)
+}
+
+func loadTLSConfig(certFile, keyFile string) (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
+	}, nil
 }
 
 // parseDelay parses the RESPONSE_DELAY environment variable to set a fixed delay or a range of delays.
