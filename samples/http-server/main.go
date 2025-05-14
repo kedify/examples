@@ -33,6 +33,26 @@ var (
 	delayHistogram prometheus.Histogram
 	cfg            DelayConfig
 	rng            = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	defaultResponse = `<!DOCTYPE html>
+<html>
+<head>
+	<title>Kedify <3 KEDA!</title>
+	<style>
+		body, html {
+			height: 100%;
+			margin: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+	</style>
+</head>
+<body>
+	<div><img src='/image'></div>
+</body>
+</html>
+`
 )
 
 func init() {
@@ -69,36 +89,18 @@ func init() {
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("root received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
 		requests.WithLabelValues("/").Inc()
-		fmt.Println("Received request from", r.RemoteAddr)
 		delay := getDelay()
 		delayHistogram.Observe(delay.Seconds())
 		time.Sleep(delay)
 		w.Header().Set("Content-Type", "text/html")
-		htmlContent := `
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<title>Kedify <3 KEDA!</title>
-				<style>
-					body, html {
-						height: 100%;
-						margin: 0;
-						display: flex;
-						justify-content: center;
-						align-items: center;
-					}
-				</style>
-			</head>
-			<body>
-				<div><img src='/image'></div>
-			</body>
-			</html>
-		`
+		htmlContent := defaultResponse
 		fmt.Fprint(w, htmlContent)
 	})
 
 	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("/image received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
 		requests.WithLabelValues("/image").Inc()
 		delay := getDelay()
 		delayHistogram.Observe(delay.Seconds())
@@ -107,6 +109,7 @@ func main() {
 	})
 
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("/echo received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
 		requests.WithLabelValues("/echo").Inc()
 		delay := getDelay()
 		delayHistogram.Observe(delay.Seconds())
@@ -120,6 +123,19 @@ func main() {
 		w.Write(dump)
 	})
 
+	http.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("/info received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+		requests.WithLabelValues("/info").Inc()
+		delay := getDelay()
+		delayHistogram.Observe(delay.Seconds())
+		time.Sleep(delay)
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "delay config:  %+v\n", cfg)
+		fmt.Fprintf(w, "POD_NAME:      %v\n", os.Getenv("POD_NAME"))
+		fmt.Fprintf(w, "POD_NAMESPACE: %v\n", os.Getenv("POD_NAMESPACE"))
+		fmt.Fprintf(w, "POD_IP:        %v\n", os.Getenv("POD_IP"))
+	})
+
 	http.Handle("/metrics", promhttp.Handler())
 
 	delayDesc := "no delay"
@@ -128,7 +144,7 @@ func main() {
 	} else if cfg.FixedDelay > 0 {
 		delayDesc = fmt.Sprintf("fixed delay of %.2f seconds", float64(cfg.FixedDelay)/float64(time.Second))
 	}
-	fmt.Printf("Server is running on http://localhost:8080 with %s\n", delayDesc)
+	log.Printf("Server is running on http://localhost:8080 with %s", delayDesc)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 

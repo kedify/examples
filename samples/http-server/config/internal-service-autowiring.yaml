@@ -89,11 +89,8 @@ spec:
     kind: Deployment
     name: server-service
   cooldownPeriod: 5
-  minReplicaCount: 1
-  maxReplicaCount: 1
-  fallback:                                       
-    failureThreshold: 2           
-    replicas: 1
+  minReplicaCount: 0
+  maxReplicaCount: 2
   advanced:                                              
     restoreToOriginalReplicaCount: true            
     horizontalPodAutoscalerConfig:
@@ -109,6 +106,6 @@ spec:
       scalingMetric: requestRate
       targetValue: "1000"
       granularity: 1s
-      window: 10s
+      window: 60s
       trafficAutowire: service
       fallbackService: server-service-fallback
