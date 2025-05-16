@@ -1,0 +1,94 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-server
+spec:
+  rules:
+    - host: demo.keda
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: http-server
+                port:
+                  number: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-server
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: http-server
+  template:
+    metadata:
+      labels:
+        app: http-server
+    spec:
+      containers:
+        - name: mycontainer
+          image: ghcr.io/kedify/sample-http-server:latest
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-server
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: http-server
+  type: ClusterIP
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: http-server 
+  namespace: default
+spec:
+  maxReplicaCount: 5
+  minReplicaCount: 1
+  cooldownPeriod: 5
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: http-server
+  triggers:
+  - metadata:
+      hosts: demo.keda
+      healthcheckPathPrefix: '/kedify-proxy/demo.keda'
+      healthcheckResponse: 'pathEmbeddedHost'
+      pathPrefixes: /
+      port: "8080"
+      scalingMetric: requestRate
+      service: http-server
+      targetValue: "1"
+    metricType: AverageValue
+    type: kedify-http
