@@ -7,6 +7,9 @@ Currently, the feature is guarded by feature flag. To enable this, set the follo
 $ kubectl --namespace=keda set env deployment/keda-operator KEDIFY_SCALINGGROUPS_ENABLED=true
 ```
 
+Requirements:
+* Kedify KEDA >= 2.17.1-0
+
 ### Basic Group Capacity
 
 There is an example of a `ScalingGroup`, you can deploy it to your cluster
