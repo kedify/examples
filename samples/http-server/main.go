@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"math/rand"
@@ -57,11 +58,13 @@ var (
 
 func init() {
 	prometheus.MustRegister(requests)
+
 	var err error
 	cfg, err = parseDelay()
 	if err != nil {
 		log.Printf("Error parsing delay: %v", err)
 	}
+
 	var buckets []float64
 	if cfg.IsRange {
 		// For a range, use 10 buckets covering the specified range.
@@ -79,6 +82,7 @@ func init() {
 		}
 		buckets = []float64{boundary}
 	}
+
 	delayHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "response_delay_seconds",
 		Help:    "Distribution of response delays in seconds",
@@ -88,55 +92,26 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("root received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
-		requests.WithLabelValues("/").Inc()
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		w.Header().Set("Content-Type", "text/html")
-		htmlContent := defaultResponse
-		fmt.Fprint(w, htmlContent)
-	})
+	tlsEnabled := os.Getenv("TLS_ENABLED") == "true"
+	certFile := os.Getenv("TLS_CERT_FILE")
+	keyFile := os.Getenv("TLS_KEY_FILE")
 
-	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("/image received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
-		requests.WithLabelValues("/image").Inc()
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		http.ServeFile(w, r, "kedify-loves-keda.gif")
-	})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", homeHandler)
+	mux.HandleFunc("/image", imageHandler)
+	mux.HandleFunc("/echo", echoHandler)
+	mux.HandleFunc("/info", infoHandler)
+	mux.Handle("/metrics", promhttp.Handler())
 
-	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("/echo received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
-		requests.WithLabelValues("/echo").Inc()
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		w.Header().Set("Content-Type", "text/plain")
-		dump, err := httputil.DumpRequest(r, true)
-		if err != nil {
-			fmt.Fprintf(w, "Error dumping request: %v", err)
-			return
-		}
-		w.Write(dump)
-	})
+	addr := ":8080"
+	if tlsEnabled {
+		addr = ":8443"
+	}
 
-	http.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("/info received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
-		requests.WithLabelValues("/info").Inc()
-		delay := getDelay()
-		delayHistogram.Observe(delay.Seconds())
-		time.Sleep(delay)
-		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(w, "delay config:  %+v\n", cfg)
-		fmt.Fprintf(w, "POD_NAME:      %v\n", os.Getenv("POD_NAME"))
-		fmt.Fprintf(w, "POD_NAMESPACE: %v\n", os.Getenv("POD_NAMESPACE"))
-		fmt.Fprintf(w, "POD_IP:        %v\n", os.Getenv("POD_IP"))
-	})
-
-	http.Handle("/metrics", promhttp.Handler())
+	server := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
 
 	delayDesc := "no delay"
 	if cfg.IsRange {
@@ -144,8 +119,101 @@ func main() {
 	} else if cfg.FixedDelay > 0 {
 		delayDesc = fmt.Sprintf("fixed delay of %.2f seconds", float64(cfg.FixedDelay)/float64(time.Second))
 	}
-	log.Printf("Server is running on http://localhost:8080 with %s", delayDesc)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Printf("Server is running on %s with %s (TLS: %v)\n", addr, delayDesc, tlsEnabled)
+
+	if tlsEnabled {
+		if certFile == "" || keyFile == "" {
+			log.Fatal("TLS_ENABLED=true but TLS_CERT_FILE or TLS_KEY_FILE not set")
+		}
+		tlsConfig, err := loadTLSConfig(certFile, keyFile)
+		if err != nil {
+			log.Fatalf("Failed to load TLS config: %v", err)
+		}
+		server.TLSConfig = tlsConfig
+		// certFile and keyFile are empty here so ListenAndServeTLS uses server.TLSConfig.Certificates
+		log.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		log.Fatal(server.ListenAndServe())
+	}
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("/ received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+	requests.WithLabelValues("/").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	w.Header().Set("Content-Type", "text/html")
+	htmlContent := `
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>Kedify <3 KEDA!</title>
+			<style>
+				body, html {
+					height: 100%;
+					margin: 0;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+				}
+			</style>
+		</head>
+		<body>
+			<div><img src='/image'></div>
+		</body>
+		</html>
+	`
+	fmt.Fprint(w, htmlContent)
+}
+
+func imageHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("/image received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+	requests.WithLabelValues("/image").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	http.ServeFile(w, r, "kedify-loves-keda.gif")
+}
+
+func echoHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("/echo received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+	requests.WithLabelValues("/echo").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	w.Header().Set("Content-Type", "text/plain")
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Fprintf(w, "Error dumping request: %v", err)
+		return
+	}
+	w.Write(dump)
+}
+
+func infoHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("/info received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+	requests.WithLabelValues("/info").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, "delay config:  %+v\n", cfg)
+	fmt.Fprintf(w, "POD_NAME:      %v\n", os.Getenv("POD_NAME"))
+	fmt.Fprintf(w, "POD_NAMESPACE: %v\n", os.Getenv("POD_NAMESPACE"))
+	fmt.Fprintf(w, "POD_IP:        %v\n", os.Getenv("POD_IP"))
+}
+
+func loadTLSConfig(certFile, keyFile string) (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
+	}, nil
 }
 
 // parseDelay parses the RESPONSE_DELAY environment variable to set a fixed delay or a range of delays.
