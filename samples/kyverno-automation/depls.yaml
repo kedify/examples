@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  labels:
+    kedify.io/create-so: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # annotations:
+  #   kedify.io/create-so: "true"
+  labels:
+    app: sample-http-server
+    kedify.io/create-so: "true"
+    kedify.io/so-template: "default"
+  name: sample-http-server
+  namespace: foo
+spec:
+  selector:
+    matchLabels:
+      app: sample-http-server
+  template:
+    metadata:
+      labels:
+        app: sample-http-server
+    spec:
+      containers:
+      - image: ghcr.io/kedify/sample-http-server:latest
+        name: sample-http-server
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bar
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    kedify.io/create-so: "true"
+    kedify.io/so-template: "default"
+  name: sample-http-server
+  namespace: bar
+spec:
+  selector:
+    matchLabels:
+      app: sample-http-server
+  template:
+    metadata:
+      labels:
+        app: sample-http-server
+    spec:
+      containers:
+      - image: ghcr.io/kedify/sample-http-server:latest
+        name: sample-http-server
+        ports:
+        - containerPort: 8080
+          protocol: TCP
