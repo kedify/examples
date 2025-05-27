@@ -1,0 +1,103 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: create-scaled-object-templating
+spec:
+  rules:
+  - name: create-scaled-object
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          operations:
+          - CREATE
+          - UPDATE
+          # can be narrowed down to certain namespaces, namespaces using the selector (labeled), deployments w/ a label
+          selector:
+            matchLabels:
+              kedify.io/create-so: "true"
+              kedify.io/so-template: "default"
+    exclude:
+      resources:
+        namespaces:
+        - kube-system
+        - kyverno
+    context:
+    - name: templateRaw
+      apiCall:
+        urlPath: "/api/v1/namespaces/{{request.object.metadata.namespace}}/configmaps/default-so"
+        jmesPath: 'data | to_string(@) | parse_yaml(@).template | to_string(@)'
+    - name: templateTriggers
+      variable:
+        value: "{{ templateRaw | parse_yaml(@).triggers }}"
+        jmesPath: '@'
+    - name: fallback
+      variable:
+        value: "{{ templateRaw | parse_yaml(@).fallback }}"
+        jmesPath: '@'
+    - name: advanced
+      variable:
+        value: "{{ templateRaw | parse_yaml(@).advanced }}"
+        jmesPath: '@'
+    - name: minReplicaCount
+      variable:
+        value: "{{ templateRaw | parse_yaml(@).minReplicaCount }}"
+        jmesPath: '@'
+    - name: maxReplicaCount
+      variable:
+        value: "{{ templateRaw | parse_yaml(@).maxReplicaCount }}"
+        jmesPath: '@'
+    generate:
+      generateExisting: false
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      name: "{{request.object.metadata.name}}-so-fromtemplate"
+      namespace: "{{request.object.metadata.namespace}}"
+      synchronize: false
+      data:
+        spec:
+          triggers: 
+            "{{ templateTriggers }}"
+          minReplicaCount: "{{ minReplicaCount }}"
+          maxReplicaCount: "{{ maxReplicaCount }}"
+          fallback: "{{ fallback }}"
+          advanced: "{{ advanced }}"
+          scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: "{{request.object.metadata.name}}"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bar
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: default-so
+  namespace: bar
+data:
+  template: |
+      triggers:
+      - type: external
+        metadata:
+          scalerAddress: "keda-otel-scaler.keda.svc:4318"
+          metricQuery: "sum(DCGM_FI_DEV_MEM_COPY_UTIL{svc={{request.object.metadata.name}}})"
+          operationOverTime: "avg"
+          targetValue: "40"
+      minReplicaCount: 1
+      maxReplicaCount: 10
+      fallback:
+        failureThreshold: 10
+        replicas: 1
+      advanced:
+        horizontalPodAutoscalerConfig:
+          behavior:
+            scaleDown:
+              # this should be higher in prod
+              stabilizationWindowSeconds: 1200
+            scaleUp:
+              # this should be much higher in prod
+              stabilizationWindowSeconds: 1

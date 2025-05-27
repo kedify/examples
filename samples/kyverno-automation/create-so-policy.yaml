@@ -1,0 +1,76 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: create-scaled-object
+spec:
+  rules:
+  - name: create-scaled-object
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          operations:
+          - CREATE
+          - UPDATE
+          namespaceSelector:
+            matchLabels:
+              kedify.io/create-so: "true"
+    exclude:
+      resources:
+        namespaces:
+        - kube-system
+        - kyverno
+    context:
+    - name: metadataAnnotations
+      variable:
+        jmesPath: request.object.metadata.annotations
+        default: {}
+    - name: extraAnnotations
+      variable:
+        value:
+          autoscaling.keda.sh/paused: "true"
+    - name: metadataAnnotations
+      variable:
+        jmesPath: merge(metadataAnnotations, extraAnnotations)
+    generate:
+      # only for new ones
+      generateExisting: false
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      name: "{{request.object.metadata.name}}-so"
+      namespace: "{{request.object.metadata.namespace}}"
+      synchronize: true
+      data:
+        metadata:
+          labels:
+            "{{request.object.metadata.labels}}"
+          annotations:
+            "{{ metadataAnnotations }}"
+        spec:
+          scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: "{{request.object.metadata.name}}"
+          triggers:
+            - type: external
+              metadata:
+                scalerAddress: "keda-otel-scaler.keda.svc:4318"
+                # 'svc' dimension is added by OTel processor (transform)
+                metricQuery: "sum(DCGM_FI_DEV_MEM_COPY_UTIL{svc={{request.object.metadata.name}}})"
+                operationOverTime: "avg"
+                targetValue: "40"
+          minReplicaCount: 1
+          maxReplicaCount: 4
+          fallback:
+            failureThreshold: 10
+            replicas: 1
+          advanced:
+            horizontalPodAutoscalerConfig:
+              behavior:
+                scaleDown:
+                  # this should be higher in prod
+                  stabilizationWindowSeconds: 1200
+                scaleUp:
+                  # this should be much higher in prod
+                  stabilizationWindowSeconds: 1

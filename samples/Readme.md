@@ -7,6 +7,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 | [grpc-responder](./grpc-responder)        | This application can be scaled by incoming gRPC traffic, including scale to zero  | Kedify HTTP |
 | [http-server](./http-server)              | This application can be scaled by incoming HTTP (or HTTPS) traffic, including scale to zero  | Kedify HTTP |
 | [kafka](./kafka)                          | This application can be scaled by number of messages in the Kafka topic, including scale to zero  | Kafka |
+| [kyverno](./kyverno-automation)|          | This example shows how to automate ScaledObject creation out of Deployment creation | Kyverno |
 | [minute-metrics](./minute-metrics)        | This application can be scaled by metrics coming from an REST endpoint that changes value every few minutes  | Metrics API |
 | [stable-diffusion](./stable-diffusion)    | This application demonstrates scaling AI workloads that runs on GPU-enabled nodes based on a job queue pattern | RabbitMQ Queue |
 | [websocket-server](./websocket-server)    | This application can be scaled by incoming Websocket traffic | Kedify HTTP |
