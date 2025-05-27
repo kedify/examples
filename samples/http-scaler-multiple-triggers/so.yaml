@@ -1,0 +1,36 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: http-server-paths
+  namespace: default
+spec:
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 5
+  scaleTargetRef:
+    name: http-server
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+    - type: kedify-http
+      name: echo
+      metadata:
+        hosts: demo.keda
+        pathPrefixes: /echo
+        port: "8080"
+        scalingMetric: requestRate
+        service: http-server
+        targetValue: "10"
+    # - type: kedify-http
+    #   name: info
+    #   metadata:
+    #     hosts: demo.keda
+    #     pathPrefixes: /info
+    #     port: "8080"
+    #     scalingMetric: requestRate
+    #     service: http-server
+    #     targetValue: "10"
