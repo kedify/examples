@@ -1,6 +1,6 @@
 The Kedify agent is an application designed to simplify deployment and management of KEDA seamlessly within your Kubernetes environment. We will install Kedify through a helm chart - you can simply click on the command below, it will get automatically executed in the terminal on the right part of the screen.
 ```bash
-helm upgrade --install --wait kedify-agent --namespace keda --create-namespace oci://docker.io/wozniakjan/kedify-agent:v0.2.8
+helm upgrade --install --wait kedify-agent --namespace keda --create-namespace oci://ghcr.io/kedify/charts/kedify-agent:v0.0.0-killercoda
 ```{{exec}}
 
 The agent also enhances KEDA capabilities with additional features. In scope of this scenario, you are going to learn about the HTTP scaler with streamlined management of `Ingress`{{}} resources.
