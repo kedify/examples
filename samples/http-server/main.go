@@ -197,11 +197,19 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 	delay := getDelay()
 	delayHistogram.Observe(delay.Seconds())
 	time.Sleep(delay)
+
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, "delay config:  %+v\n", cfg)
 	fmt.Fprintf(w, "POD_NAME:      %v\n", os.Getenv("POD_NAME"))
 	fmt.Fprintf(w, "POD_NAMESPACE: %v\n", os.Getenv("POD_NAMESPACE"))
 	fmt.Fprintf(w, "POD_IP:        %v\n", os.Getenv("POD_IP"))
+
+	fmt.Fprintln(w, "\nRequest Headers:")
+	for name, values := range r.Header {
+		for _, v := range values {
+			fmt.Fprintf(w, "%s: %s\n", name, v)
+		}
+	}
 }
 
 func loadTLSConfig(certFile, keyFile string) (*tls.Config, error) {

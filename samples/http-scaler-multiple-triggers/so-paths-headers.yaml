@@ -1,0 +1,37 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: http-server-combined
+  namespace: default
+spec:
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  scaleTargetRef:
+    name: http-server
+  triggers:
+    - type: kedify-http
+      name: alpha
+      metadata:
+        hosts: demo.keda
+        headers: |
+          - name: app
+            value: alpha
+        pathPrefixes: /info
+        port: "8080"
+        scalingMetric: requestRate
+        service: http-server
+        targetValue: "10"
+        window: 10s
+    - type: kedify-http
+      name: beta
+      metadata:
+        hosts: demo.keda
+        headers: |
+          - name: app
+            value: beta
+        pathPrefixes: /echo
+        port: "8080"
+        scalingMetric: requestRate
+        service: http-server
+        targetValue: "10"
+        window: 10s
