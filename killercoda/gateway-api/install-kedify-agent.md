@@ -1,6 +1,6 @@
-The Kedify agent is an application designed to simplify deployment and management of KEDA seamlessly within your Kubernetes environment. For the purposes of the scenario here in Killercoda, you will use the pre-installed [Kedify kubectl plugin](https://github.com/jkremser/kubectl-kedify). You can click on the command below, it will get automatically executed in the terminal on the right part of the screen.
+The Kedify agent is an application designed to simplify deployment and management of KEDA seamlessly within your Kubernetes environment. We will install Kedify through a helm chart - you can simply click on the command below, it will get automatically executed in the terminal on the right part of the screen.
 ```bash
-kubectl kedify install --email keda-meets-gw@killercoda.com -y
+helm upgrade --install --wait kedify-agent --namespace keda --create-namespace oci://docker.io/wozniakjan/kedify-agent:v0.2.8
 ```{{exec}}
 
 The agent also enhances KEDA capabilities with additional features. In scope of this scenario, you are going to learn about the HTTP scaler with streamlined management of `HTTPRoute`{{}} resources.
@@ -12,7 +12,6 @@ After the agent is deployed, it will install KEDA and other necessary dependenci
 watch -n1 --color kubecolor --force-colors get deployments -nkeda
 ```{{exec}}
 
-
 Deployed KEDA should look similar to this, it may take around 1 to 2 minutes for all KEDA parts to become fully ready
 ```bash
 NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
@@ -22,10 +21,9 @@ keda-admission-webhooks                1/1     1            1           83s
 keda-operator                          1/1     1            1           83s
 keda-operator-metrics-apiserver        1/1     1            1           83s
 kedify-agent                           1/1     1            1           99s
-metrics-server                         1/1     1            1           88s
 ```{{}}
 
-The agent installed metrics server, latest KEDA and HTTP Add-On. To stop the `watch`{{}} loop, you can just hit:
+The agent installed KEDA and HTTP Add-On. To stop the `watch`{{}} loop, you can just hit:
 ```
 # ctrl+c
 ```{{exec interrupt}}
