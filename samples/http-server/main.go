@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -14,16 +16,80 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type DelayConfig struct {
-	FixedDelay time.Duration
-	IsRange    bool
-	MinDelay   float64
-	MaxDelay   float64
+	TLSAcceptDelay time.Duration
+	TLSReadDelay   time.Duration
+	TLSWriteDelay  time.Duration
+	FixedDelay     time.Duration
+	IsRange        bool
+	MinDelay       float64
+	MaxDelay       float64
+	ErrorRate      float64
+	ErrorRespCode  int
+}
+
+type tlsListenerWithDelay struct {
+	net.Listener
+	acceptDelay time.Duration
+	readDelay   time.Duration
+	writeDelay  time.Duration
+}
+
+type tlsConnWithDelay struct {
+	net.Conn
+	readDelay  time.Duration
+	writeDelay time.Duration
+}
+
+func (c *tlsConnWithDelay) Read(b []byte) (n int, err error) {
+	if c.readDelay > 0 {
+		log.Printf("Delaying TLS read by %v", c.readDelay)
+		time.Sleep(c.readDelay)
+	}
+	return c.Conn.Read(b)
+}
+
+func (c *tlsConnWithDelay) Write(b []byte) (n int, err error) {
+	if c.writeDelay > 0 {
+		log.Printf("Delaying TLS write by %v", c.writeDelay)
+		time.Sleep(c.writeDelay)
+	}
+	return c.Conn.Write(b)
+}
+
+func (l *tlsListenerWithDelay) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	if l.acceptDelay > 0 {
+		log.Printf("Delaying TLS connection acceptance by %v", l.acceptDelay)
+		time.Sleep(l.acceptDelay)
+	}
+	delayedConn := &tlsConnWithDelay{
+		Conn:       conn,
+		readDelay:  l.readDelay,
+		writeDelay: l.writeDelay,
+	}
+	return delayedConn, nil
 }
 
 var (
+	// otel
+	tracer trace.Tracer
+
+	// prometheus
 	requests = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -32,9 +98,10 @@ var (
 		[]string{"endpoint"},
 	)
 	delayHistogram prometheus.Histogram
-	cfg            DelayConfig
-	rng            = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+	// response
+	cfg             DelayConfig
+	rng             = rand.New(rand.NewSource(time.Now().UnixNano()))
 	defaultResponse = `<!DOCTYPE html>
 <html>
 <head>
@@ -58,6 +125,29 @@ var (
 
 func init() {
 	prometheus.MustRegister(requests)
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" {
+		endpointStr := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+		log.Println("Initializing OpenTelemetry exporter", "endpoint:", endpointStr)
+		exp, err := otlptracegrpc.New(context.Background(),
+			otlptracegrpc.WithEndpoint(endpointStr),
+			otlptracegrpc.WithInsecure(),
+		)
+		if err != nil {
+			log.Fatalf("failed to initialize exporter: %v", err)
+		}
+		bsp := sdktrace.NewBatchSpanProcessor(exp)
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithResource(resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.ServiceNameKey.String("example-http-server"),
+			)),
+			sdktrace.WithSpanProcessor(bsp),
+		)
+		tracer = tp.Tracer("example-http-server")
+		otel.SetTracerProvider(tp)
+		otel.SetTextMapPropagator(propagation.TraceContext{})
+	}
 
 	var err error
 	cfg, err = parseDelay()
@@ -101,6 +191,7 @@ func main() {
 	mux.HandleFunc("/image", imageHandler)
 	mux.HandleFunc("/echo", echoHandler)
 	mux.HandleFunc("/info", infoHandler)
+	mux.HandleFunc("/error", errorHandler)
 	mux.Handle("/metrics", promhttp.Handler())
 
 	addr := ":8080"
@@ -119,6 +210,29 @@ func main() {
 	} else if cfg.FixedDelay > 0 {
 		delayDesc = fmt.Sprintf("fixed delay of %.2f seconds", float64(cfg.FixedDelay)/float64(time.Second))
 	}
+
+	errorRate := os.Getenv("ERROR_RATE")
+	if errorRate != "" {
+		rateFloat, err := strconv.ParseFloat(errorRate, 64)
+		if err != nil || rateFloat < 0 || rateFloat > 1 {
+			log.Printf("Invalid ERROR_RATE value: %v", errorRate)
+		}
+		cfg.ErrorRate = rateFloat
+		log.Printf("Simulating errors with a rate of %.2f%% on /error endpoint", cfg.ErrorRate*100)
+	} else {
+		log.Println("No error simulation configured")
+	}
+
+	cfg.ErrorRespCode = http.StatusServiceUnavailable
+	errorRespCode := os.Getenv("ERROR_RESP_CODE")
+	if errorRespCode != "" {
+		code, err := strconv.Atoi(errorRespCode)
+		if err != nil || code < 400 || code > 599 {
+			log.Printf("Invalid ERROR_RESP_CODE value: %v, using default %d: %v", errorRespCode, cfg.ErrorRespCode, err)
+		}
+		cfg.ErrorRespCode = code
+	}
+
 	log.Printf("Server is running on %s with %s (TLS: %v)\n", addr, delayDesc, tlsEnabled)
 
 	if tlsEnabled {
@@ -131,13 +245,32 @@ func main() {
 		}
 		server.TLSConfig = tlsConfig
 		// certFile and keyFile are empty here so ListenAndServeTLS uses server.TLSConfig.Certificates
-		log.Fatal(server.ListenAndServeTLS("", ""))
+		baseListener, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatalf("Failed to listen on %s: %v", addr, err)
+		}
+		// Wrap the listener to add a delay on Accept
+		listener := &tlsListenerWithDelay{
+			Listener:    baseListener,
+			acceptDelay: cfg.TLSAcceptDelay,
+			readDelay:   cfg.TLSReadDelay,
+			writeDelay:  cfg.TLSWriteDelay,
+		}
+		log.Fatal(server.ServeTLS(listener, "", ""))
 	} else {
 		log.Fatal(server.ListenAndServe())
 	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
+	if tracer != nil {
+		ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		_, span := tracer.Start(ctx, "homeHandler")
+		defer span.End()
+		span.SetAttributes(attribute.String("http.method", r.Method))
+		log.Printf("Tracing enabled: %v", span.SpanContext().IsSampled())
+	}
+
 	log.Printf("/ received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
 	requests.WithLabelValues("/").Inc()
 	delay := getDelay()
@@ -189,6 +322,22 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(dump)
+}
+
+func errorHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("/error received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+	requests.WithLabelValues("/error").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+
+	// Simulate an error response based on the configured error rate
+	if cfg.ErrorRate > 0 && rng.Float64() < cfg.ErrorRate {
+		log.Printf("Simulating error response for /error endpoint")
+		http.Error(w, "Simulated error response", cfg.ErrorRespCode)
+	} else {
+		log.Printf("No error simulated for /error endpoint")
+	}
 }
 
 func infoHandler(w http.ResponseWriter, r *http.Request) {
@@ -257,6 +406,30 @@ func parseDelay() (DelayConfig, error) {
 			return c, fmt.Errorf("invalid delay value: %v", err)
 		}
 		c.FixedDelay = time.Duration(d * float64(time.Second))
+	}
+	tlsAcceptDelayStr := os.Getenv("TLS_ACCEPT_DELAY")
+	if tlsAcceptDelayStr != "" {
+		tlsDelay, err := strconv.ParseFloat(tlsAcceptDelayStr, 64)
+		if err != nil {
+			return c, fmt.Errorf("invalid TLS_ACCEPT_DELAY value: %v", err)
+		}
+		c.TLSAcceptDelay = time.Duration(tlsDelay * float64(time.Second))
+	}
+	tlsReadDelayStr := os.Getenv("TLS_READ_DELAY")
+	if tlsReadDelayStr != "" {
+		tlsDelay, err := strconv.ParseFloat(tlsReadDelayStr, 64)
+		if err != nil {
+			return c, fmt.Errorf("invalid TLS_READ_DELAY value: %v", err)
+		}
+		c.TLSReadDelay = time.Duration(tlsDelay * float64(time.Second))
+	}
+	tlsWriteDelayStr := os.Getenv("TLS_WRITE_DELAY")
+	if tlsWriteDelayStr != "" {
+		tlsDelay, err := strconv.ParseFloat(tlsWriteDelayStr, 64)
+		if err != nil {
+			return c, fmt.Errorf("invalid TLS_WRITE_DELAY value: %v", err)
+		}
+		c.TLSWriteDelay = time.Duration(tlsDelay * float64(time.Second))
 	}
 	return c, nil
 }

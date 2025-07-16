@@ -1,0 +1,223 @@
+# Service internal autowiring example with an example service that is slow to accept TLS connections.
+#
+## curl
+# kubectl run curl --image=curlimages/curl:latest --restart=Never --command -- /bin/sh -c "sleep infinity"
+# kubectl exec -it curl -- sh 
+# curl --insecure -I https://server-service.default.svc.cluster.local:8443
+#
+## hey benchmark 
+# kubectl run hey --image=ghcr.io/kedacore/tests-hey:latest --restart=Never --command -- /bin/sh -c "sleep infinity"
+# kubectl exec -it hey -- sh
+# ./hey -n 100000 -c 1500 -t 0 https://server-service.default.svc.cluster.local:8443
+#
+## OTel tracing
+# https://kedify.io/documentation/how-to/otel-tracing-proxy-and-interceptor/
+# helm repo add jaeger-all-in-one https://raw.githubusercontent.com/hansehe/jaeger-all-in-one/master/helm/charts
+# helm repo update jaeger-all-in-one
+# helm upgrade -i jaeger-all-in-one jaeger-all-in-one/jaeger-all-in-one --set enableHttpOpenTelemetryCollector=true
+# kubectl run otel-cli --image=ghcr.io/equinix-labs/otel-cli:latest --restart=Never --command -- /bin/sh -c "sleep infinity"
+# kubectl exec -it otel-cli -- sh
+# apk add curl
+# ./otel-cli exec --name test-request --verbose --protocol grpc --endpoint=http://jaeger-all-in-one.default.svc:4317 -- curl -H "traceparent:{{traceparent}}" --insecure https://server-service.default.svc.cluster.local:8443
+# kubectl port-forward svc/jaeger-all-in-one 16686
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-service-buggy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: server-service
+      version: buggy
+  template:
+    metadata:
+      labels:
+        app: server-service
+        version: buggy
+    spec:
+      containers:
+        - name: server-service
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: tls
+              containerPort: 8443
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: jaeger-all-in-one.default.svc:4317
+            - name: RESPONSE_DELAY
+              value: "0.3"
+            - name: TLS_ACCEPT_DELAY
+              value: "2.0"
+            - name: TLS_ENABLED
+              value: "true"
+            - name: TLS_CERT_FILE
+              value: "/certs/tls.crt"
+            - name: TLS_KEY_FILE
+              value: "/certs/tls.key"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: "/certs"
+              readOnly: true
+          resources:
+            limits:
+              cpu: 1m
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: http-server-tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: server-service
+      version: tls
+  template:
+    metadata:
+      labels:
+        app: server-service
+        version: tls 
+    spec:
+      containers:
+        - name: server-service
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: tls
+              containerPort: 8443
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger-all-in-one.default.svc:4317
+            - name: RESPONSE_DELAY
+              value: "0.3"
+            - name: TLS_ENABLED
+              value: "true"
+            - name: TLS_CERT_FILE
+              value: "/certs/tls.crt"
+            - name: TLS_KEY_FILE
+              value: "/certs/tls.key"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: "/certs"
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: http-server-tls
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: http-server-tls
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRVENDQWltZ0F3SUJBZ0lVRjlzM3dWNklsUk1oUlFvdWlDZ3p1eWZhdmY0d0RRWUpLb1pJaHZjTkFRRUwKQlFBd01ERVdNQlFHQTFVRUF3d05kR3h6TFdSbGJXOHVhMlZrWVRFV01CUUdBMVVFQ2d3TmRHeHpMV1JsYlc4dQphMlZrWVRBZUZ3MHlOVEEwTWprd056RXdNekZhRncweU5qQTBNamt3TnpFd016RmFNREF4RmpBVUJnTlZCQU1NCkRYUnNjeTFrWlcxdkxtdGxaR0V4RmpBVUJnTlZCQW9NRFhSc2N5MWtaVzF2TG10bFpHRXdnZ0VpTUEwR0NTcUcKU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRQ3cxUFBnT0hjTWFaRnNjWGJvRzlTMnVIeG5MaU5qdXhudApXUDFDMnBEWExFTERVZml5Q2NNTlowaFd1QWtOa3d3T0tXL25QODVPTXpvS1NDaTZ0eEg3UzE0ZTc0SVVudGRaCmFGNnMzdXBjS21WbXhKb1FTaFUxVWJJcmJ5d2xBUFlMSTNuUXdURlFPbXY4NkdsYk9sZDNTSkI4RU91aUIrL0oKR0NCTXhUMVN0K3dIUElVTERzOWJmMHY2UU81bk14d2ZyOEJHRHlRYlFRUW43RVhNN0ZlVnZyT3h2UWhET3pDZQp3U2luZmtvRXU4VXI1OTVUODRaMmxobHN1bFM4UjNHN0NyUjV5cXpVZ3JFbkRTaXYydms1THhQYVBUQ3l2WXNTCjl1L0tKWE5pWUxzVXY4QSs0MS9uOFRzMzJkQnhhVTNsZUhUOFNyQjc5UFZ3OFg3dGttbmxBZ01CQUFHalV6QlIKTUIwR0ExVWREZ1FXQkJSWmxmMVJPQVV4eUxndTNXWFBYLzZLT0x3UDBEQWZCZ05WSFNNRUdEQVdnQlJabGYxUgpPQVV4eUxndTNXWFBYLzZLT0x3UDBEQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01BMEdDU3FHU0liM0RRRUJDd1VBCkE0SUJBUUNsZnlqNmhsZ3FPaEFBZmlSZUNlUkxFdXkzYjFlUFplRTJmb3VqQkRKcjdGM3Q1aHgvUUViaWl4TDQKQm9wRzZDYUM0ZmhmWEMyUy85U3NzOTNsVHFhNlQxSWVhdVF4U3dUL1ArTGRVckVhSG5lQnlTN2EwYWdaMUpVbQpYWHJGMEFNVUYrVGRPRW1lZzEyM1RZajNJcWNORFNxUCtINDY1Y3dFTStZa003TVNGUlNOMUVac0ZFZGQ1MFBlCms4Q1JUSUdDVjZzdDFpYlBRTFdVaFBEN0pSdDd0UnhMbXh5amx2bit5Q0oySlBac3NzNDJpK0dENlFxbjVGVEsKY08zRTFNZlRHTmZBU2dtTnNDOTRINXVOVkdQVVdSSGxvekkxR0FVMjF1QkRrVkI0dm5zaDFzZmVEZDVicWZnawoxK2FyQkdIWWRRNnplNVkrL3J2RiswZk91V1VxCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQ3cxUFBnT0hjTWFaRnMKY1hib0c5UzJ1SHhuTGlOanV4bnRXUDFDMnBEWExFTERVZml5Q2NNTlowaFd1QWtOa3d3T0tXL25QODVPTXpvSwpTQ2k2dHhIN1MxNGU3NElVbnRkWmFGNnMzdXBjS21WbXhKb1FTaFUxVWJJcmJ5d2xBUFlMSTNuUXdURlFPbXY4CjZHbGJPbGQzU0pCOEVPdWlCKy9KR0NCTXhUMVN0K3dIUElVTERzOWJmMHY2UU81bk14d2ZyOEJHRHlRYlFRUW4KN0VYTTdGZVZ2ck94dlFoRE96Q2V3U2luZmtvRXU4VXI1OTVUODRaMmxobHN1bFM4UjNHN0NyUjV5cXpVZ3JFbgpEU2l2MnZrNUx4UGFQVEN5dllzUzl1L0tKWE5pWUxzVXY4QSs0MS9uOFRzMzJkQnhhVTNsZUhUOFNyQjc5UFZ3CjhYN3RrbW5sQWdNQkFBRUNnZ0VBRzRNZWFIblFoK1ZhNDJEcDY2WDgyK3JyTEJDQklCQ3BzWVJoYndmYmRpYmsKUWtoY0piTWdIbE05N1lRWG9IMks2QjhwVW5UYWI4OUhqZmI1STBlOWEvZ25iaSs4Y09IZnhvRFhEaFZtcUMxTwpkb1ZMSlJLcHB4Q05aSFdaREM3UW1SNE5ZMTNUZ3RSOEhhNjVTYURUbi9MeHkrUEVEWU1ubXdWK2JRTlpEYWZlCnVPV0RhMGFNUTEvWnN1YnhwdlJVSmxzdmF1VzVPY2txcGVRWHIyaU51bktTRHlmSzJ6Y0NIM0RIMCtwMVhHZ2cKUjN3b1NCbmNwdFlERGNZT3c3dnNmSGRCdG1QdXlaU3pWNE5aRVZZVFl6VVZ6dzZIWEE5b1AxZDdCRGFXdThyUApBMXR3ZjRyczJqWWk4bVhTT0s0aW5KcldnWVIvV1hsdG1meVlONzQrUVFLQmdRRGNoVE5uNG5Xd2RSU21WQzE1CkxSOUtQNkpoK0ZVUjNBcnFla3NYZlFackErbjN2MmRMbUlmbTFIMzdVRFArQzZjTDVUTWtnc01nRjBLWHZ3R1MKRXQwVFkzNzVwNWZMZEZOaHlTUXdOemI5MGtYZjU3SlJpd1VRRXFrREdxOUEyb3daV1MxL0JtVXNVWENhSWtVZgpaWU5RR2hyMFdWSEN6SkI2MkdBQStXSHhSUUtCZ1FETlNFODZsc0Vnang0dTB6MUNWcFlsVm04cUd0VUZLb2F4CnYyL09oN3EyVFRUK0wxS2NaRnJhcUNIaEF3WnRNVVVjdFZQVkk2WDBtTHA3K09OaitpM0xEbnEzTFV0cTdCUlMKZ3luZWlBMXNvM0diWWg3YU9DOFRteEdTVy8zelRXNXoyOUp1Vm5qazR6M0E4WnZiUnAwcGhpOWtMbzJBRzV1VwpDaWlROEVZUUlRS0JnSDBsMXZPbzhKT1JEb1FLbDdnQ1pKU1Zvb2twRHRaUTQ1MEloRjh6SkJaTnBWVmx1YkNNClF1dzhRYmNEWUU1WHZKaWluYkNseVNrSUtsSEdJNVVMd1kxRVZRWklGM3h1YXZlKzJCdkk2aHVJWHdGZ0U3SDEKVEkwL21jMWFNb1dDd2ltTWs2WllNY2pCK3o1dUhuNWY5UExicmRwb2FsODhDdTY4cDFkR01GQmxBb0dBRndkZAptL3o5ZldHUXlULzVSMC9mV0NEeUo0OExCcUZXcXVvRzZPeGhEY0pyaDNoWGxDUE43V21mSTFicmlhUlZWSHNqCkJHNFRWL1VxTm00ZFZFSGtrVHIybVVZRGgrTWtCSDJpWE14MmRSR0ExU1dVd0hZOUViMzdvcWVmUFlRYU4vVVoKRGplMUtEZzEzVWM5Yk1QbkxabFlCNjBSUXFYV05tYTlWa1VlRndFQ2dZQS9KRkdwSmZ5cWt2a0sydlQzWm5VQgpDTWwwcGtOVXNvZGNzNHdUOHJBNC9INnptV2V1SVI1RHBTODRSMERtUktkVzFFRWhLNm5pMGZVS0FWWHdTZGd3CmRsUVdwZ1JvL2VxNkYyOTZzaVo0QzJFY1g5OXpwb1hVOWN5MDZKeHZ4dWlha2hFbS9NSDdYaTFEdlRTUWRJLzkKS25Jc3dPa01oazdranFZZE5qTTdEQT09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-service
+spec:
+  ports:
+    - name: tls
+      protocol: TCP
+      port: 8443
+      targetPort: tls
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-service-fallback
+spec:
+  ports:
+    - name: tls
+      protocol: TCP
+      port: 8443
+      targetPort: tls
+  type: ClusterIP
+  selector:
+    app: server-service
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: server-service
+spec:
+  rules:
+    - host: tls-demo.keda
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: server-service
+                port:
+                  number: 8443
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: server-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: server-service
+  cooldownPeriod: 5
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: tls-demo.keda,server-service.default.svc.cluster.local
+      service: server-service
+      port: "8443"
+      scalingMetric: requestRate
+      targetValue: "100"
+      granularity: 1s
+      window: 60s
+      trafficAutowire: service
+      fallbackService: server-service-fallback
+      loadbalancing: eds
+      tlsSecretName: http-server-tls
