@@ -57,7 +57,7 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
    ```
    This example introduces a 0.3-second delay in each response.
 
-      ```yaml
+   ```yaml
    - name: RESPONSE_DELAY
      value: "0.5-10"
    ```
@@ -82,6 +82,30 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
    ```bash
    hey -n 100000 -c 100 -host "demo.keda" http://localhost:9080
    ```
+
+7. **Setup OTel Tracing** (optional):
+
+   If you want to enable OpenTelemetry tracing, you can set the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable in your deployment manifest. This should point to your OpenTelemetry collector endpoint.
+
+   ```yaml
+   - name: OTEL_EXPORTER_OTLP_ENDPOINT
+     value: "http://otel-collector:4317"
+   ```
+
+   Make sure you have an OpenTelemetry collector running in your cluster to receive the traces. Only the `/` root endpoint has tracing telemetry implemented.
+
+8. **Simulating Errors**:
+
+   You can simulate errors by setting the `ERROR_RATE` and `ERROR_RESP_CODE` environment variables. This will cause the server to randomly return HTTP 503 errors (or code specified by `ERROR_RESP_CODE`) based on the error rate.
+
+   ```yaml
+   - name: ERROR_RATE
+     value: "0.1"  # 10% error rate
+   - name: ERROR_RESP_CODE
+     value: "500"  # HTTP status code to return on error
+   ```
+
+   This will cause approximately 10% of requests on endpoint `/error` to return a 500 Internal Server Error.
 
 ### Deploy in k3d with TLS and NGINX Ingress
 
@@ -137,6 +161,19 @@ You can run the HTTP server with TLS enabled behind the NGINX ingress controller
   
   ```bash
   kubectl apply -f config/tls-manifests.yaml
+  ```
+
+3.1. **Configure TLS Delays** (Optional):
+
+  It's possible to artificially introduce delays on the network layer for testing various scenarios with degraded network performance.
+
+  ```yaml
+  - name: TLS_ACCEPT_DELAY
+    value: "2.0"
+  - name: TLS_READ_DELAY
+    value: "1.0"
+  - name: TLS_WRITE_DELAY
+    value: "0.5"
   ```
 
 4. **Test TLS with Host Header**:

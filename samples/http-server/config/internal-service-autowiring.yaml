@@ -8,7 +8,7 @@
 # kubectl run hey --image=ghcr.io/kedacore/tests-hey:latest --restart=Never --command -- /bin/sh -c "sleep infinity"
 # kubectl exec -it hey -- sh
 #
-# ./hey -n 10000 -c 150 -host "server-service.keda" http://server-service.default.svc.cluster.local:8080
+# ./hey -n 100000 -c 1500 -t 0 -host "server-service.keda" http://server-service.default.svc.cluster.local:8080
 #
 apiVersion: apps/v1
 kind: Deployment
@@ -89,8 +89,8 @@ spec:
     kind: Deployment
     name: server-service
   cooldownPeriod: 5
-  minReplicaCount: 0
-  maxReplicaCount: 2
+  minReplicaCount: 1
+  maxReplicaCount: 20
   advanced:                                              
     restoreToOriginalReplicaCount: true            
     horizontalPodAutoscalerConfig:
@@ -104,8 +104,9 @@ spec:
       service: server-service
       port: "8080"
       scalingMetric: requestRate
-      targetValue: "1000"
+      targetValue: "100"
       granularity: 1s
       window: 60s
       trafficAutowire: service
       fallbackService: server-service-fallback
+      # loadbalancing: eds
