@@ -174,7 +174,11 @@ You can run the HTTP server with TLS enabled behind the NGINX ingress controller
     value: "1.0"
   - name: TLS_WRITE_DELAY
     value: "0.5"
+  - name: TLS_DELAY_TIMEOUT
+    value: "5.0"
   ```
+
+  These variables control the delays for accepting connections, reading from the connection, writing to the connection, and the expiration timeout for these operations.
 
 4. **Test TLS with Host Header**:
 

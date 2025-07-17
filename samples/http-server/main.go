@@ -28,32 +28,35 @@ import (
 )
 
 type DelayConfig struct {
-	TLSAcceptDelay time.Duration
-	TLSReadDelay   time.Duration
-	TLSWriteDelay  time.Duration
-	FixedDelay     time.Duration
-	IsRange        bool
-	MinDelay       float64
-	MaxDelay       float64
-	ErrorRate      float64
-	ErrorRespCode  int
+	TLSAcceptDelay  time.Duration
+	TLSReadDelay    time.Duration
+	TLSWriteDelay   time.Duration
+	TLSDelayTimeout time.Duration
+	FixedDelay      time.Duration
+	IsRange         bool
+	MinDelay        float64
+	MaxDelay        float64
+	ErrorRate       float64
+	ErrorRespCode   int
 }
 
 type tlsListenerWithDelay struct {
 	net.Listener
-	acceptDelay time.Duration
-	readDelay   time.Duration
-	writeDelay  time.Duration
+	acceptDelay  time.Duration
+	delayTimeout time.Duration
+	readDelay    time.Duration
+	writeDelay   time.Duration
 }
 
 type tlsConnWithDelay struct {
 	net.Conn
-	readDelay  time.Duration
-	writeDelay time.Duration
+	delayTimeout time.Duration
+	readDelay    time.Duration
+	writeDelay   time.Duration
 }
 
 func (c *tlsConnWithDelay) Read(b []byte) (n int, err error) {
-	if c.readDelay > 0 {
+	if c.readDelay > 0 && !delayExpired(c.delayTimeout) {
 		log.Printf("Delaying TLS read by %v", c.readDelay)
 		time.Sleep(c.readDelay)
 	}
@@ -61,7 +64,7 @@ func (c *tlsConnWithDelay) Read(b []byte) (n int, err error) {
 }
 
 func (c *tlsConnWithDelay) Write(b []byte) (n int, err error) {
-	if c.writeDelay > 0 {
+	if c.writeDelay > 0 && !delayExpired(c.delayTimeout) {
 		log.Printf("Delaying TLS write by %v", c.writeDelay)
 		time.Sleep(c.writeDelay)
 	}
@@ -73,19 +76,30 @@ func (l *tlsListenerWithDelay) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	if l.acceptDelay > 0 {
+	if l.acceptDelay > 0 && !delayExpired(l.delayTimeout) {
 		log.Printf("Delaying TLS connection acceptance by %v", l.acceptDelay)
 		time.Sleep(l.acceptDelay)
 	}
 	delayedConn := &tlsConnWithDelay{
-		Conn:       conn,
-		readDelay:  l.readDelay,
-		writeDelay: l.writeDelay,
+		Conn:         conn,
+		readDelay:    l.readDelay,
+		writeDelay:   l.writeDelay,
+		delayTimeout: l.delayTimeout,
 	}
 	return delayedConn, nil
 }
 
+func delayExpired(timeout time.Duration) bool {
+	if timeout <= 0 {
+		return false
+	}
+	return time.Since(startDelayTimeout) > timeout
+}
+
 var (
+	// delays
+	startDelayTimeout = time.Now()
+
 	// otel
 	tracer trace.Tracer
 
@@ -251,10 +265,11 @@ func main() {
 		}
 		// Wrap the listener to add a delay on Accept
 		listener := &tlsListenerWithDelay{
-			Listener:    baseListener,
-			acceptDelay: cfg.TLSAcceptDelay,
-			readDelay:   cfg.TLSReadDelay,
-			writeDelay:  cfg.TLSWriteDelay,
+			Listener:     baseListener,
+			acceptDelay:  cfg.TLSAcceptDelay,
+			readDelay:    cfg.TLSReadDelay,
+			writeDelay:   cfg.TLSWriteDelay,
+			delayTimeout: cfg.TLSDelayTimeout,
 		}
 		log.Fatal(server.ServeTLS(listener, "", ""))
 	} else {
@@ -430,6 +445,14 @@ func parseDelay() (DelayConfig, error) {
 			return c, fmt.Errorf("invalid TLS_WRITE_DELAY value: %v", err)
 		}
 		c.TLSWriteDelay = time.Duration(tlsDelay * float64(time.Second))
+	}
+	tlsDelayTimeoutStr := os.Getenv("TLS_DELAY_TIMEOUT")
+	if tlsDelayTimeoutStr != "" {
+		tlsTimeout, err := strconv.ParseFloat(tlsDelayTimeoutStr, 64)
+		if err != nil {
+			return c, fmt.Errorf("invalid TLS_DELAY_TIMEOUT value: %v", err)
+		}
+		c.TLSDelayTimeout = time.Duration(tlsTimeout * float64(time.Second))
 	}
 	return c, nil
 }

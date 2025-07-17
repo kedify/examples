@@ -119,9 +119,13 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: http://jaeger-all-in-one.default.svc:4317
+              value: jaeger-all-in-one.default.svc:4317
             - name: RESPONSE_DELAY
               value: "0.3"
+            - name: TLS_ACCEPT_DELAY
+              value: "2.0"
+            - name: TLS_DELAY_TIMEOUT
+              value: "15.0"
             - name: TLS_ENABLED
               value: "true"
             - name: TLS_CERT_FILE
