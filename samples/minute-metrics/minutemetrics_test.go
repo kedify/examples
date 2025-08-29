@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -91,6 +92,94 @@ func TestCalculateValue(t *testing.T) {
 	value = mm.calculateValue()
 	if value != 3.0 {
 		t.Errorf("Expected value 3.0, got %f", value)
+	}
+}
+
+func TestCalculateLaterValues(t *testing.T) {
+	type expectedValueEventually struct {
+		afterMinutes int
+		value        int
+	}
+	type testCase struct {
+		schedule       string
+		cycle          int
+		expectedValues []expectedValueEventually
+	}
+	testCases := []testCase{
+		{
+			schedule: "0:2,2:4,4:8,6:16",
+			cycle:    10,
+			expectedValues: []expectedValueEventually{
+				{afterMinutes: 3, value: 4},
+				{afterMinutes: 5, value: 8},
+				{afterMinutes: 9, value: 16},
+				{afterMinutes: 11, value: 2},
+				{afterMinutes: (42 * 10) + 3, value: 4},
+			},
+		},
+		{
+			schedule: "0:1,1:2,2:3,3:4,4:0",
+			cycle:    5,
+			expectedValues: []expectedValueEventually{
+				{afterMinutes: 1, value: 1},
+				{afterMinutes: 3, value: 3},
+				{afterMinutes: 5, value: 0},
+				{afterMinutes: 6, value: 1},
+				{afterMinutes: 2 * 3 * 4 * 5 * 6, value: (2 * 3 * 4 * 5 * 6) % 5},
+			},
+		},
+		// longer cycle
+		{
+			schedule: "0:0,10:10,20:20",
+			cycle:    30,
+			expectedValues: []expectedValueEventually{
+				{afterMinutes: 21, value: 20},
+				{afterMinutes: 71, value: 10},
+				{afterMinutes: (42 * 30) + 21, value: 20},
+				{afterMinutes: (142 * 30) + 31, value: 0},
+			},
+		},
+		{
+			schedule: "0:0,10:10,20:20,30:30,40:40,50:50",
+			cycle:    60,
+			expectedValues: []expectedValueEventually{
+				{afterMinutes: 51, value: 50},
+				{afterMinutes: 71, value: 10},
+				{afterMinutes: (42 * 60) + 21, value: 20},
+				{afterMinutes: (142 * 60) + 41, value: 40},
+			},
+		},
+		{
+			schedule: "0:0,60:1,120:2,180:3,240:4,300:5,360:6,420:7",
+			cycle:    60 * 8,
+			expectedValues: []expectedValueEventually{
+				{afterMinutes: 121, value: 2},
+				{afterMinutes: 421, value: 7},
+				{afterMinutes: (42 * 8 * 60) + 21, value: 0},
+				{afterMinutes: (42 * 8 * 60) + 301, value: 5},
+			},
+		},
+	}
+	same := func(v1 float64, v2 int) bool {
+		return math.Abs(float64(v2)-v1) < 1e-6
+	}
+	for _, tc := range testCases {
+		mm := NewMinuteMetrics()
+		if err := mm.parseSchedule(tc.schedule); err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		mm.cycleMinutes = tc.cycle
+		now := time.Now()
+		mm.startTime = &now
+		for _, ev := range tc.expectedValues {
+			// Simulate N minutes later
+			nMinutesLater := now.Add(time.Duration(ev.afterMinutes) * time.Minute)
+			mm.startTime = &nMinutesLater
+
+			if value := mm.calculateValue(); !same(value, ev.value) {
+				t.Errorf("Expected: %d, got: %.0f schedule: %s cycle: %d after: %d min", ev.value, value, tc.schedule, tc.cycle, ev.afterMinutes)
+			}
+		}
 	}
 }
 

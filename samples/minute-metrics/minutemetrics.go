@@ -14,21 +14,29 @@ import (
 )
 
 var (
-	defaultScheduleStr = "0:8,1:0,2:4,3:2,4:0,5:3,7:5,9:0"
+	defaultScheduleStr  = "0:8,1:0,2:4,3:2,4:0,5:3,7:5,9:0"
+	defaultCycleMinutes = 10
 )
 
 // MinuteMetrics is the main application struct
 type MinuteMetrics struct {
-	startTime *time.Time
-	baseValue float64
-	lazyStart bool
-	schedule  []ScheduleItem
-	mutex     sync.Mutex
+	startTime    *time.Time
+	baseValue    float64
+	cycleMinutes int
+	lazyStart    bool
+	schedule     []ScheduleItem
+	mutex        sync.Mutex
 }
 
 // NewMinuteMetrics initializes new MinuteMetrics struct with environment variables as defaults
 func NewMinuteMetrics() *MinuteMetrics {
 	baseVal, _ := strconv.ParseFloat(os.Getenv("BASE"), 64)
+	cycleMinutes := defaultCycleMinutes
+	if value, set := os.LookupEnv("CYCLE_MINUTES"); set {
+		if val, err := strconv.Atoi(value); err == nil {
+			cycleMinutes = val
+		}
+	}
 	lazyStrt := os.Getenv("LAZY_START") == "true"
 	schStr := os.Getenv("SCHEDULE")
 	if schStr == "" {
@@ -36,8 +44,9 @@ func NewMinuteMetrics() *MinuteMetrics {
 	}
 
 	app := &MinuteMetrics{
-		baseValue: baseVal,
-		lazyStart: lazyStrt,
+		baseValue:    baseVal,
+		lazyStart:    lazyStrt,
+		cycleMinutes: cycleMinutes,
 	}
 
 	if err := app.parseSchedule(schStr); err != nil {
@@ -95,7 +104,7 @@ func (mm *MinuteMetrics) calculateValue() float64 {
 	}
 
 	elapsed := time.Since(*mm.startTime).Minutes()
-	currentMinute := int(math.Abs(elapsed)) % 10 // Assuming a 10-minute cycle
+	currentMinute := int(math.Abs(elapsed)) % mm.cycleMinutes
 
 	// Start with the base value by default
 	var currentValue float64
