@@ -6,11 +6,11 @@
 
 accelerate==0.29.3
 diffusers==0.27.2
-transformers==4.39.3
-Pillow==9.4.0
+transformers==4.53.0
+Pillow==10.3.0
 openvino==2024.1.0
 optimum-intel==1.16.0
-onnx==1.16.0
+onnx==1.17.0
 onnxruntime==1.17.3
 pydantic==2.4.2
 typing-extensions==4.8.0
