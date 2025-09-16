@@ -1,0 +1,32 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: spring-server-push
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: spring-server
+  triggers:
+    - type: external
+      metadata:
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        enableTLS: "true"
+        unsafeSsl: "true"
+        caCert: |
+${_caCertPem}
+        tlsClientCert: |
+${_tlsClientCert}
+        tlsClientKey: |
+${_tlsClientKey}
+        metricQuery: "sum(http_server_request_duration_count{http_request_method=GET,http.response_status_code=200,http_route=/ping})"
+        operationOverTime: "rate"
+        targetValue: "2"
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+        scaleUp:
+          stabilizationWindowSeconds: 1
