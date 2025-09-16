@@ -1,0 +1,13 @@
+%% mermaid-ascii -f springboot-pull-architecture-simple.mermaid -x 18 > springboot-pull-architecture.ascii
+%% mmdc -i springboot-pull-architecture-simple.mermaid -o springboot-pull-architecture.svg
+
+graph LR
+classDef red color:#ff0000
+spring-server -->|Prom Receiver| router:::red
+
+router:::red -->|Remote-Write| Prometheus
+router:::red -->|OTLP/gRPC| KEDA-Scaler
+Prometheus -->|HTTP| Grafana
+KEDA-Scaler -->|gRPC| KEDA
+
+OTelOperator
