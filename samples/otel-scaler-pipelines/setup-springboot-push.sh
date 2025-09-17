@@ -80,7 +80,7 @@ kubectl patch service grafana \
 
 # spring boot workloads (client and server apps) - push metrics using OTLP over gRPC
 # repo: https://github.com/jkremser/opentelemetry-java-examples/tree/main/spring
-kubectl apply -napp -f springboot-deployment.yaml
+kubectl apply -napp -f ${DIR}/springboot-deployment.yaml
 
 kubectl create deploy -napp spring-client --image=ghcr.io/kedify/springboot:tracing
 kubectl set env deploy/spring-client -napp \
