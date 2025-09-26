@@ -18,7 +18,7 @@ Architecture:
 To bootstrap this scenario just run:
 
 ```bash
-./setup-springboot-push.sh
+./setup-springboot-pull.sh
 ```
 
 
@@ -31,7 +31,7 @@ Architecture:
 To bootstrap this scenario just run:
 
 ```bash
-./setup-springboot-pull.sh
+./setup-springboot-push.sh
 ```
 
 ## Description
