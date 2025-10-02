@@ -13,7 +13,7 @@ There are two examples:
 
 Architecture:
 
-![diagram](./springboot-push-architecture.svg "Diagram")
+![diagram](./springboot-pull-architecture.svg "Diagram")
 
 To bootstrap this scenario just run:
 
@@ -26,7 +26,7 @@ To bootstrap this scenario just run:
 
 Architecture:
 
-![diagram](./springboot-pull-architecture.svg "Diagram")
+![diagram](./springboot-push-architecture.svg "Diagram")
 
 To bootstrap this scenario just run:
 
