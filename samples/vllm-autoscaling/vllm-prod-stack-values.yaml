@@ -1,0 +1,19 @@
+servingEngineSpec:
+  runtimeClassName: "nvidia"
+  modelSpec:
+  - name: "opt125m"
+    repository: "vllm/vllm-openai"
+    tag: "v0.9.2"
+    modelURL: "facebook/opt-125m"
+
+    podAnnotations:
+      sidecar.opentelemetry.io/inject: "otel-sidecar-template"
+    replicaCount: 1
+    requestCPU: 6
+    requestMemory: "16Gi"
+    requestGPU: 1
+    env:
+      - name: VLLM_LOGGING_LEVEL
+        value: DEBUG
+  labels:
+    app: "prod-stack-vllm-facebook-opt-125m"
