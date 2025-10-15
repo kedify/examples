@@ -156,6 +156,7 @@ Deploying autoscaling components.
 
 Once you have a model running you can set up the autoscaling components by running `setup.sh`
 the script will deploy
+
 - KEDA
 - KEDA OTel Scaler & OTel Operator
 - ScaledObject
@@ -167,4 +168,4 @@ After the components are in place you can run `loadgeneration.sh`
 It will port-forward the vllm router and send traffic
 As a result you should see a new vLLM replica scheduled.
 
-
+For more otel-add-on + vLLM scaling checkout this [examples](https://github.com/kedify/otel-add-on/tree/main/examples/vllm) 
