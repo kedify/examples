@@ -1,5 +1,5 @@
 #!/bin/bash
-#ensure your cluster suports GPU workloads before running this script
+#ensure your cluster supports GPU workloads before running this script
 set -e
 
 

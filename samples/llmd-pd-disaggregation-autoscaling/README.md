@@ -1,8 +1,8 @@
-# PD Disagregation Autoscaling
-This example explore how to deploy llm-d PD Disaggregation and how to scale it on GKE.
+# Prefill Decode Disaggregation Autoscaling
+This example explores how to deploy llm-d PD Disaggregation and how to scale it on GKE.
 
 # Understanding PD Disaggregation 
-PD Disaggregation consist of separating prefill and decode stages to diferent instances. This add extra complexity to serving models since we need to share KV cache betwen instances. On the other hand benefits include we can scale each stage separatelly.
+PD Disaggregation consists of separating prefill and decode stages to different instances. This adds extra complexity to serving models since we need to share KV cache between instances. On the other hand, benefits include we can scale each stage separately.
 
 See [this page](https://github.com/llm-d/llm-d-inference-scheduler/blob/main/docs/dp.md) to understan how PD disaggregation inference works.
 
@@ -35,15 +35,15 @@ helm upgrade -i pd llm-d-modelservice/llm-d-modelservice -f values-pd.yaml
 
 # Autoscaling
 
-Deploy the autoscaling components using `.setup.sh` including installation of:
+Deploy the autoscaling components using `./setup.sh` including installation of:
 
 - KEDA
 - KEDA OTel Scaler & OTel Operator
 - ScaledObject
 
-Ensure you have certmanger in cluster before instaling the KEDAOTEL operator so we can use the `sidecar`s.
+Ensure you have cert-manger in cluster before instaling the KEDAOTEL operator so we can use the `sidecar`s.
 
-After the components are in place you can run `loadgeneration.sh`
+After the components are in place, you can run `./loadgeneration.sh`
 
 It will get the Gateway API IP and send similar requests to it. 
 As a result you should see the decode deployment being scheduled. This is because the prompt is the same every time and prefill is skiped.
@@ -59,7 +59,7 @@ You can also check metrics on the keda scaler and you should see diferent values
 If you want to inspect logs to confirm the behaviour
 
 - check EPP logs and you should see prefill and decode selection
-- check the decode proxy and you should see scnearios where it completly ignore prefill or logs when conecting to prefill instance
+- check the decode proxy and you should see scenarios where it completely ignores prefill or logs when connecting to prefill instance
 - check decode main container logs and you should see completeion request with the do_remote_decode=false
 - check prefill logs and you should see the completions request of new prompts.
 - on prefil and decode you should se logs refering to nixlconnector working to share the KV values
