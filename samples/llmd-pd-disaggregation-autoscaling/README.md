@@ -35,13 +35,13 @@ helm upgrade -i pd llm-d-modelservice/llm-d-modelservice -f values-pd.yaml
 
 # Autoscaling
 
+Ensure you have cert-manger in cluster before instaling the KEDAOTEL operator so we can use the `sidecar`s.
+
 Deploy the autoscaling components using `./setup.sh` including installation of:
 
 - KEDA
 - KEDA OTel Scaler & OTel Operator
 - ScaledObject
-
-Ensure you have cert-manger in cluster before instaling the KEDAOTEL operator so we can use the `sidecar`s.
 
 After the components are in place, you can run `./loadgeneration.sh`
 
