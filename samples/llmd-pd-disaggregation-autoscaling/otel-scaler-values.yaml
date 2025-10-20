@@ -1,0 +1,40 @@
+settings:
+  metricStore:
+    retentionSeconds: 60
+  # logs:
+  #   logLvl: debug
+
+otelOperator:
+  manager:
+    env:
+      ENABLE_WEBHOOKS: "true"
+  admissionWebhooks:
+    create: true
+
+otelOperatorCrs:
+- name: otel-decode-template
+  enabled: true
+  # debug: true
+  mode: sidecar
+  namespace: default
+  prometheusScrapeConfigs:
+    - job_name: 'otel-collector'
+      scrape_interval: 5s
+      static_configs:
+        - targets: [ '0.0.0.0:8000' ]
+  includeMetrics:
+    - vllm:request_success_total
+    - vllm:request_generation_tokens
+- name: otel-prefill-template
+  enabled: true
+  # debug: true
+  mode: sidecar
+  namespace: default
+  prometheusScrapeConfigs:
+    - job_name: 'otel-collector'
+      scrape_interval: 5s
+      static_configs:
+        - targets: [ '0.0.0.0:8000' ]
+  includeMetrics:
+    - vllm:request_success_total
+    - vllm:request_prompt_tokens
