@@ -12,10 +12,10 @@ spec:
   triggers:
     - type: external
       metadata:
-        scalerAddress: "keda-otel-scaler.default.svc:4318"
-        metricQuery: "vllm:request_success_total{deployment=pd-llm-d-modelservice-decode}"
-        operationOverTime: "last_one"
-        targetValue: "20"
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        metricQuery: "sum(vllm:request_success_total{deployment=pd-llm-d-modelservice-decode})"
+        operationOverTime: "rate"
+        targetValue: "0.5"
   minReplicaCount: 1
   maxReplicaCount: 2
   fallback:
@@ -26,7 +26,7 @@ spec:
       behavior:
         scaleDown:
           # this should be higher in prod
-          stabilizationWindowSeconds: 1200
+          stabilizationWindowSeconds: 120
         scaleUp:
           # this should be much higher in prod
           stabilizationWindowSeconds: 1
@@ -45,10 +45,10 @@ spec:
   triggers:
     - type: external
       metadata:
-        scalerAddress: "keda-otel-scaler.default.svc:4318"
-        metricQuery: "vllm:request_success_total{deployment=pd-llm-d-modelservice-prefill}"
-        operationOverTime: "last_one"
-        targetValue: "20"
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        metricQuery: "sum(vllm:request_success_total{deployment=pd-llm-d-modelservice-prefill})"
+        operationOverTime: "rate"
+        targetValue: "0.5"
   minReplicaCount: 1
   maxReplicaCount: 2
   fallback:

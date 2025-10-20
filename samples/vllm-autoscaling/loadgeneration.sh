@@ -1,6 +1,6 @@
 #!/bin/bash
 (kubectl port-forward svc/vllm-router-service 30080:80 &> /dev/null)& pf_pid=$!
-(sleep $[1*60] && kill ${pf_pid})&
+(sleep $((1*60)) && kill ${pf_pid})&
 
 end=$((SECONDS+60))
 i=0

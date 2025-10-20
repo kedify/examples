@@ -5,11 +5,11 @@ This demo shows how to scale vLLM instances using KEDA + Keda Otel Scaler.
 
 # Create a cluster with managed drivers from GKE
 
-We create a COS nodes cluster with L4 accelerators. Use the managed drivers from GKE set up to latest version (only available on COS nodes only) 
+We create a Container-Optimized OS (COS) nodes cluster with L4 accelerators. Use the managed drivers from GKE set up to latest version (only available on COS nodes only) 
 We use the NVIDIA operator to handle installation of container toolkit + other resources to allow us to deploy accelerator workloads.
 
 ```
-gcloud beta container --project "kedify-test" clusters create "kedify-vllm-production-stack-md" --zone "us-central1-b" --no-enable-basic-auth --cluster-version "1.33.4-gke.1172000" --release-channel "regular" --machine-type "g2-standard-8" --accelerator "type=nvidia-l4,count=1,gpu-driver-version=latest" --image-type "COS_CONTAINERD" --disk-type "pd-balanced" --disk-size "200" --metadata disable-legacy-endpoints=true --num-nodes "1" --logging=SYSTEM,WORKLOAD --monitoring=SYSTEM --enable-ip-alias --network "projects/kedify-test/global/networks/default" --subnetwork "projects/kedify-test/regions/us-central1/subnetworks/default" --no-enable-intra-node-visibility --default-max-pods-per-node "110" --enable-autoscaling --min-nodes "0" --max-nodes "2" --location-policy "BALANCED" --enable-ip-access --security-posture=standard --workload-vulnerability-scanning=disabled --no-enable-google-cloud-access --addons HorizontalPodAutoscaling,HttpLoadBalancing,GcePersistentDiskCsiDriver --enable-autoupgrade --enable-autorepair --max-surge-upgrade 1 --max-unavailable-upgrade 1 --binauthz-evaluation-mode=DISABLED --no-enable-managed-prometheus --enable-shielded-nodes --shielded-integrity-monitoring --no-shielded-secure-boot --node-locations "us-central1-b" --gateway-api=standard
+gcloud beta container --project "kedify-test" clusters create "kedify-vllm-production-stack-md" --zone "us-central1-b" --no-enable-basic-auth --cluster-version "1.33.5-gke.1080000" --release-channel "regular" --machine-type "g2-standard-8" --accelerator "type=nvidia-l4,count=1,gpu-driver-version=latest" --image-type "COS_CONTAINERD" --disk-type "pd-balanced" --disk-size "200" --metadata disable-legacy-endpoints=true --num-nodes "1" --logging=SYSTEM,WORKLOAD --monitoring=SYSTEM --enable-ip-alias --network "projects/kedify-test/global/networks/default" --subnetwork "projects/kedify-test/regions/us-central1/subnetworks/default" --no-enable-intra-node-visibility --default-max-pods-per-node "110" --enable-autoscaling --min-nodes "0" --max-nodes "2" --location-policy "BALANCED" --enable-ip-access --security-posture=standard --workload-vulnerability-scanning=disabled --no-enable-google-cloud-access --addons HorizontalPodAutoscaling,HttpLoadBalancing,GcePersistentDiskCsiDriver --enable-autoupgrade --enable-autorepair --max-surge-upgrade 1 --max-unavailable-upgrade 1 --binauthz-evaluation-mode=DISABLED --no-enable-managed-prometheus --enable-shielded-nodes --shielded-integrity-monitoring --no-shielded-secure-boot --node-locations "us-central1-b" --gateway-api=standard
 
 gcloud container clusters get-credentials kedify-vllm-production-stack-md --zone us-central1-b --project kedify-test
 
@@ -55,6 +55,8 @@ EOF
 ## Install the helm chart and no drivers
 
 ```
+helm repo add nvidia https://helm.ngc.nvidia.com/nvidia \
+    && helm repo update
 helm install --wait --generate-name \
   -n gpu-operator --create-namespace \
   nvidia/gpu-operator \

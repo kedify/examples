@@ -15,7 +15,7 @@ spec:
         scalerAddress: "keda-otel-scaler.keda.svc:4318"
         metricQuery: "sum(vllm:current_qps)"
         operationOverTime: "avg"
-        targetValue: ".1"
+        targetValue: "0.1"
   minReplicaCount: 1
   maxReplicaCount: 2
   fallback:

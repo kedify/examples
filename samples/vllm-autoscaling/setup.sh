@@ -18,8 +18,8 @@ KEDA_VERSION=${KEDA_VERSION:-v2.17.1-0}
 helm upgrade -i keda kedify/keda --namespace keda --create-namespace --version ${KEDA_VERSION}
 
 # install KEDA OTel Scaler & OTel Operator
-helm upgrade -i keda-otel-scaler -nkeda oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.2 -f ./otel-scaler-values.yaml
+helm upgrade -i keda-otel-scaler --namespace keda oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.2 -f ./otel-scaler-values.yaml
 
 # create ScaledObject
-kubectl delete so model-sidecar-approach 2> /dev/null || true
+kubectl delete -f ./vllm-so.yaml 2> /dev/null || true
 kubectl apply -f ./vllm-so.yaml

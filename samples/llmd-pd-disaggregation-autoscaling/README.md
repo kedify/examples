@@ -7,7 +7,7 @@ PD Disaggregation consists of separating prefill and decode stages to different 
 See [this page](https://github.com/llm-d/llm-d-inference-scheduler/blob/main/docs/dp.md) to understan how PD disaggregation inference works.
 
 # Gateway API
-Intall Gateway API Inference Extension from gaie.md
+Intall Gateway API Inference Extension from `gaie.md`
 Ensure you have all resources available
 
 # Running PD disaggregation from llm-d-modelservice(smaller model)

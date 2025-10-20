@@ -17,10 +17,16 @@ KEDA_VERSION=$(curl -s https://api.github.com/repos/kedify/charts/releases | jq 
 KEDA_VERSION=${KEDA_VERSION:-v2.17.1-0}
 helm upgrade -i keda kedify/keda --namespace keda --create-namespace --version ${KEDA_VERSION}
 
+# install cert-manager
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.19.1/cert-manager.yaml
+
 # install KEDA OTel Scaler & OTel Operator
-helm upgrade -i keda-otel-scaler -nkeda oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.2 -f ./otel-scaler-values.yaml
+helm upgrade -i keda-otel-scaler --namespace keda oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.2 -f ./otel-scaler-values.yaml
+
+# roll the deployments so that mutating webhooks injects the sidecars
+kubectl rollout restart deploy/pd-llm-d-modelservice-prefill
+kubectl rollout restart deploy/pd-llm-d-modelservice-decode
 
 # create ScaledObject
-kubectl delete so model-sidecar-approach 2> /dev/null || true
-kubectl delete -f ./llmd-pd-disaggregation-so.yaml
+kubectl delete -f ./llmd-pd-disaggregation-so.yaml 2> /dev/null || true
 kubectl apply -f ./llmd-pd-disaggregation-so.yaml
