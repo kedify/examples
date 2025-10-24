@@ -16,16 +16,23 @@ MinuteMetrics can be configured using command-line arguments or environment vari
 ### Command-Line Arguments
 
 - `-base`: Sets the initial base value for calculations. Overrides the `BASE` environment variable if provided.
+- `-multiplier` Similar to `base`, it scales the values by a factor. This is applied before adding the `base`. Overrides `MULTIPLIER` if provided.
 - `-lazy-start`: Enables lazy start, delaying the schedule's start until the first request is received. Overrides the `LAZY_START` environment variable if provided.
 - `-schedule`: Defines the value update schedule in a `minute:value` pairs format. Overrides the `SCHEDULE` environment variable if provided.
+- `-cycle-minutes`: Repeat provided schedule every N minutes provided by this variable.
 - `-static-value`: Sets the initial static value for static metrics. Overrides the `STATIC_VALUE` environment variable if provided.
+- `-time-relative-to-start`: When enabled (default), it will use the time app is running for its calculations. Disabled takes the UTC time of a day - # of minutes since midnight. Overrides `TIME_RELATIVE_TO_START` if provided
+- `-interpolate-values`: When enabled, it will interpolate the values between each schedule items. Overrides `INTERPOLATE_VALUES` if provided.
 - `-help`: Displays help information about the application usage and options.
 
 ### Environment Variables
 
 - `BASE`: Sets the initial base value for calculations.
+- `MULTIPLIER`: See cmd arg `-multiplier`. Takes a float.
 - `LAZY_START`: Enables lazy start with "true".
 - `SCHEDULE`: Defines the value update schedule in a `minute:value` pairs format.
+- `TIME_RELATIVE_TO_START`: See cmd arg `-time-relative-to-start`. Disables with "false" (enabled by default).
+- `INTERPOLATE_VALUES`: See cmd arg `-interpolate-values`. Enables with "true".
 - `STATIC_VALUE`: Sets the initial static value for static metrics.
 
 ## Endpoint
@@ -64,6 +71,12 @@ Schedules are defined as comma-separated `minute:value` pairs, where `minute` is
 
 - Schedule: `"0:5,5:0"`
 - Behavior: The value starts at 5 and resets to 0 at the 5th minute of the cycle.
+
+### Example 4: Return number of minutes in a day multiplied by 3 and add 42 to it
+
+```bash
+go run . -cycle-minutes $[24*60] -base 42 -multiplier 3 -interpolate-values -time-relative-to-start=false -schedule "0:0,1440:1440"
+```
 
 ## Running MinuteMetrics
 
