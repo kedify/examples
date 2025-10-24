@@ -20,17 +20,21 @@ var (
 
 // MinuteMetrics is the main application struct
 type MinuteMetrics struct {
-	startTime    *time.Time
-	baseValue    float64
-	cycleMinutes int
-	lazyStart    bool
-	schedule     []ScheduleItem
-	mutex        sync.Mutex
+	startTime           *time.Time
+	baseValue           float64
+	multiplier          float64
+	cycleMinutes        int
+	lazyStart           bool
+	timeRelativeToStart bool
+	interpolateValues   bool
+	schedule            []ScheduleItem
+	mutex               sync.Mutex
 }
 
 // NewMinuteMetrics initializes new MinuteMetrics struct with environment variables as defaults
 func NewMinuteMetrics() *MinuteMetrics {
 	baseVal, _ := strconv.ParseFloat(os.Getenv("BASE"), 64)
+	multiplier, _ := strconv.ParseFloat(os.Getenv("MULTIPLIER"), 64)
 	cycleMinutes := defaultCycleMinutes
 	if value, set := os.LookupEnv("CYCLE_MINUTES"); set {
 		if val, err := strconv.Atoi(value); err == nil {
@@ -38,15 +42,20 @@ func NewMinuteMetrics() *MinuteMetrics {
 		}
 	}
 	lazyStrt := os.Getenv("LAZY_START") == "true"
+	interpolate := os.Getenv("INTERPOLATE_VALUES") == "true"
+	timeRelativeToStart := os.Getenv("TIME_RELATIVE_TO_START") != "false"
 	schStr := os.Getenv("SCHEDULE")
 	if schStr == "" {
 		schStr = defaultScheduleStr
 	}
 
 	app := &MinuteMetrics{
-		baseValue:    baseVal,
-		lazyStart:    lazyStrt,
-		cycleMinutes: cycleMinutes,
+		baseValue:           baseVal,
+		multiplier:          multiplier,
+		lazyStart:           lazyStrt,
+		interpolateValues:   interpolate,
+		timeRelativeToStart: timeRelativeToStart,
+		cycleMinutes:        cycleMinutes,
 	}
 
 	if err := app.parseSchedule(schStr); err != nil {
@@ -68,7 +77,7 @@ type ScheduleItem struct {
 	Value  float64
 }
 
-// parseSchedule parses the schedule string and populates the schedule field.
+// parseSchedule parses the schedule string and returns the slice of ScheduleItems.
 func (mm *MinuteMetrics) parseSchedule(scheduleStr string) error {
 	var tempSchedule []ScheduleItem
 	pairs := strings.Split(scheduleStr, ",")
@@ -88,8 +97,8 @@ func (mm *MinuteMetrics) parseSchedule(scheduleStr string) error {
 	sort.Slice(tempSchedule, func(i, j int) bool {
 		return tempSchedule[i].Minute < tempSchedule[j].Minute
 	})
-
 	mm.schedule = tempSchedule
+
 	return nil
 }
 
@@ -99,20 +108,29 @@ func (mm *MinuteMetrics) calculateValue() float64 {
 	defer mm.mutex.Unlock()
 
 	if mm.startTime == nil {
-		now := time.Now()
-		mm.startTime = &now
+		mm.StartTicking()
 	}
 
 	elapsed := time.Since(*mm.startTime).Minutes()
-	currentMinute := int(math.Abs(elapsed)) % mm.cycleMinutes
+	currentMinute := math.Mod(math.Abs(elapsed), float64(mm.cycleMinutes))
 
 	// Start with the base value by default
 	var currentValue float64
 
 	// Find the last schedule item that applies to the current minute
-	for _, item := range mm.schedule {
-		if item.Minute <= currentMinute {
-			currentValue = mm.baseValue + item.Value
+	for i, item := range mm.schedule {
+		if float64(item.Minute) <= currentMinute {
+			if mm.interpolateValues && i != len(mm.schedule)-1 {
+				// take the value between the two
+				sinceLastItem := currentMinute - float64(item.Minute)
+				tillNextItem := float64(mm.schedule[i+1].Minute) - currentMinute
+				gap := mm.schedule[i+1].Minute - item.Minute
+				lastItemWeight := tillNextItem / float64(gap)
+				nextItemWeight := sinceLastItem / float64(gap)
+				currentValue = mm.baseValue + mm.multiplier*(lastItemWeight*item.Value+nextItemWeight*mm.schedule[i+1].Value)
+			} else {
+				currentValue = mm.baseValue + (mm.multiplier * item.Value)
+			}
 		} else {
 			// Since the schedule is sorted, we can break once we've passed the current minute
 			break
@@ -120,6 +138,17 @@ func (mm *MinuteMetrics) calculateValue() float64 {
 	}
 
 	return currentValue
+}
+
+func (mm *MinuteMetrics) StartTicking() {
+	if mm.timeRelativeToStart {
+		now := time.Now()
+		mm.startTime = &now
+	} else {
+		y, m, d := time.Now().Date()
+		midnight := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+		mm.startTime = &midnight
+	}
 }
 
 // Handler handles requests to the "/api/v1/get" endpoint
