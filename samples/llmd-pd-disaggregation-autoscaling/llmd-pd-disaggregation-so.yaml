@@ -1,0 +1,65 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: decode-sidecar
+  annotations:
+    autoscaling.keda.sh/paused: "false"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pd-llm-d-modelservice-decode
+  triggers:
+    - type: external
+      metadata:
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        metricQuery: "sum(vllm:request_success_total{deployment=pd-llm-d-modelservice-decode})"
+        operationOverTime: "rate"
+        targetValue: "0.5"
+  minReplicaCount: 1
+  maxReplicaCount: 2
+  fallback:
+    failureThreshold: 10
+    replicas: 1
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          # this should be higher in prod
+          stabilizationWindowSeconds: 120
+        scaleUp:
+          # this should be much higher in prod
+          stabilizationWindowSeconds: 1
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: prefill-sidecar
+  annotations:
+    autoscaling.keda.sh/paused: "false"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pd-llm-d-modelservice-prefill
+  triggers:
+    - type: external
+      metadata:
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        metricQuery: "sum(vllm:request_success_total{deployment=pd-llm-d-modelservice-prefill})"
+        operationOverTime: "rate"
+        targetValue: "0.5"
+  minReplicaCount: 1
+  maxReplicaCount: 2
+  fallback:
+    failureThreshold: 10
+    replicas: 1
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          # this should be higher in prod
+          stabilizationWindowSeconds: 1200
+        scaleUp:
+          # this should be much higher in prod
+          stabilizationWindowSeconds: 1
