@@ -212,6 +212,9 @@ func main() {
 	if tlsEnabled {
 		addr = ":8443"
 	}
+	if port := os.Getenv("PORT"); port != "" {
+		addr = ":" + port
+	}
 
 	server := &http.Server{
 		Addr:    addr,
