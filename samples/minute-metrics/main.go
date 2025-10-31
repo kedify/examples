@@ -3,21 +3,39 @@ package main
 import (
 	"flag"
 	"fmt"
+	"html"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
+const (
+	paramBase                = "base"
+	paramMultiplier          = "multiplier"
+	paramLazyStart           = "lazy-start"
+	paramTimeRelativeToStart = "time-relative-to-start"
+	paramInterpolateValues   = "interpolate-values"
+	paramSchedule            = "schedule"
+	paramCycleMinutes        = "cycle-minutes"
+	paramStaticValue         = "static-value"
+	paramPort                = "port"
+
+	staticMetricPath = "/api/v1/staticmetrics"
+	minuteMetricPath = "/api/v1/minutemetrics"
+)
+
 func main() {
-	baseValueFlag := flag.Float64("base", 0, "Initial base value for calculations. Overrides BASE if provided.")
-	multiplierFlag := flag.Float64("multiplier", 1, "Multiply the calculated value before returning by this constant. Overrides MULTIPLIER if provided.")
-	lazyStartFlag := flag.Bool("lazy-start", true, "Enable lazy start. Overrides LAZY_START if provided.")
-	timeRelativeToStart := flag.Bool("time-relative-to-start", true, "When enabled (default), it will use the time app is running for its calculations. Disabled takes the UTC time of a day - # of minutes since midnight. Overrides TIME_RELATIVE_TO_START if provided")
-	interpolateValues := flag.Bool("interpolate-values", false, "When enabled, it will interpolate the values between each schedule items. Overrides INTERPOLATE_VALUES if provided.")
-	scheduleFlag := flag.String("schedule", "", "Schedule configuration as 'minute:value' pairs. Overrides SCHEDULE if provided.")
-	cycleMinutesFlag := flag.Int("cycle-minutes", 60*24, "Repeat provided schedule every N minutes provided by this variable.")
-	staticValueFlag := flag.Float64("static-value", 0, "Static value for static metrics. Overrides STATIC_VALUE if provided.")
+	baseValueFlag := flag.Float64(paramBase, 0, "Initial base value for calculations. Overrides BASE if provided.")
+	multiplierFlag := flag.Float64(paramMultiplier, 1, "Multiply the calculated value before returning by this constant. Overrides MULTIPLIER if provided.")
+	lazyStartFlag := flag.Bool(paramLazyStart, true, "Enable lazy start. Overrides LAZY_START if provided.")
+	timeRelativeToStart := flag.Bool(paramTimeRelativeToStart, true, "When enabled (default), it will use the time app is running for its calculations. Disabled takes the UTC time of a day - # of minutes since midnight. Overrides TIME_RELATIVE_TO_START if provided")
+	interpolateValues := flag.Bool(paramInterpolateValues, false, "When enabled, it will interpolate the values between each schedule items. Overrides INTERPOLATE_VALUES if provided.")
+	scheduleFlag := flag.String(paramSchedule, "", "Schedule configuration as 'minute:value' pairs. Overrides SCHEDULE if provided.")
+	cycleMinutesFlag := flag.Int(paramCycleMinutes, 10, "Repeat provided schedule every N minutes provided by this variable.")
+	staticValueFlag := flag.Float64(paramStaticValue, 0, "Static value for static metrics. Overrides STATIC_VALUE if provided.")
 	helpFlag := flag.Bool("help", false, "Displays help information.")
+	portFlag := flag.Int(paramPort, 8080, "Listen for HTTP requests on this port.")
 
 	flag.Parse()
 
@@ -27,29 +45,44 @@ func main() {
 	}
 
 	mm := NewMinuteMetrics()
-	sm := NewStaticMetrics(*staticValueFlag)
+	staticValue, _ := mustGetParamValue(paramStaticValue, *staticValueFlag)
+	sm := NewStaticMetrics(staticValue)
 
 	// Override app fields with flag values if provided
-	mm.baseValue = *baseValueFlag
-	mm.multiplier = *multiplierFlag
-	mm.lazyStart = *lazyStartFlag
-	mm.timeRelativeToStart = *timeRelativeToStart
-	mm.interpolateValues = *interpolateValues
-	if *scheduleFlag != "" {
-		if err := mm.parseSchedule(*scheduleFlag); err != nil {
+	mm.baseValue, _ = mustGetParamValue(paramBase, *baseValueFlag)
+	mm.multiplier, _ = mustGetParamValue(paramMultiplier, *multiplierFlag)
+	mm.lazyStart, _ = mustGetParamValue(paramLazyStart, *lazyStartFlag)
+	mm.timeRelativeToStart, _ = mustGetParamValue(paramTimeRelativeToStart, *timeRelativeToStart)
+	cycleMinutes, wasSet := mustGetParamValue(paramCycleMinutes, *cycleMinutesFlag)
+	mm.cycleMinutes = cycleMinutes
+	if !wasSet {
+		mm.cycleMinutes = 10
+		if !mm.timeRelativeToStart {
+			mm.cycleMinutes = 60 * 24
+		}
+	}
+	mm.interpolateValues, _ = mustGetParamValue(paramInterpolateValues, *interpolateValues)
+	scheduleString, _ := mustGetParamValue(paramSchedule, *scheduleFlag)
+	if scheduleString != "" {
+		if err := mm.parseSchedule(scheduleString); err != nil {
 			fmt.Printf("Failed to parse schedule from command line: %v\n", err)
 			os.Exit(1)
 		}
 	}
-	mm.cycleMinutes = *cycleMinutesFlag
+	mm.cycleMinutes, _ = mustGetParamValue(paramCycleMinutes, *cycleMinutesFlag)
+	port, _ := mustGetParamValue(paramPort, *portFlag)
 
 	if !mm.lazyStart {
 		mm.StartTicking()
 	}
 
 	// Set up routing
-	http.Handle("/api/v1/staticmetrics", sm)
-	http.HandleFunc("/api/v1/minutemetrics", mm.Handler)
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprintf(writer, "Endpoints:\n - [GET] %q\n - [GET] %q\n",
+			html.EscapeString(staticMetricPath), html.EscapeString(minuteMetricPath))
+	})
+	http.Handle(staticMetricPath, sm)
+	http.HandleFunc(minuteMetricPath, mm.Handler)
 	fmt.Printf("schedule: %s\n", strings.Join(
 		func() []string {
 			out := make([]string, len(mm.schedule))
@@ -66,9 +99,9 @@ func main() {
 	fmt.Printf("lazy-start: %t\n", mm.lazyStart)
 	fmt.Printf("time-relative-to-start: %t\n", mm.timeRelativeToStart)
 	fmt.Printf("interpolate-values: %t\n", mm.interpolateValues)
-	fmt.Printf("static-value: %.1f\n\n", *staticValueFlag)
-	fmt.Println("Server started on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	fmt.Printf("static-value: %.1f\n\n", staticValue)
+	fmt.Printf("Server started on :%d\n", port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
 		fmt.Printf("Failed to start server: %v\n", err)
 	}
 }
@@ -120,4 +153,38 @@ To update the static value via curl:
 
 For more information or contributions, visit the repository or contact the developers.`
 	fmt.Println(helpContent)
+}
+
+func mustGetParamValue[T string | int | bool | float64](name string, val T) (T, bool) {
+	flagSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			flagSet = true
+		}
+	})
+	envValue, envVarSet := os.LookupEnv(strings.ReplaceAll(strings.ToUpper(name), "-", "_"))
+	if !flagSet && envVarSet {
+		var result any
+		// envValue to T
+		switch fmt.Sprintf("%T", *new(T)) {
+		case "string":
+			result = envValue
+		case "int":
+			intValue, err := strconv.Atoi(envValue)
+			if err != nil {
+				panic(fmt.Errorf("[%s] could not parse value of '%s' to int", name, envValue))
+			}
+			result = intValue
+		case "bool":
+			result = envValue == "true"
+		case "float64":
+			floatValue, err := strconv.ParseFloat(envValue, 64)
+			if err != nil {
+				panic(fmt.Errorf("[%s] could not parse value of '%s' to float64", name, envValue))
+			}
+			result = floatValue
+		}
+		return result.(T), true
+	}
+	return val, flagSet
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,39 +30,13 @@ type MinuteMetrics struct {
 	mutex               sync.Mutex
 }
 
-// NewMinuteMetrics initializes new MinuteMetrics struct with environment variables as defaults
 func NewMinuteMetrics() *MinuteMetrics {
-	baseVal, _ := strconv.ParseFloat(os.Getenv("BASE"), 64)
-	multiplier, _ := strconv.ParseFloat(os.Getenv("MULTIPLIER"), 64)
-	cycleMinutes := defaultCycleMinutes
-	if value, set := os.LookupEnv("CYCLE_MINUTES"); set {
-		if val, err := strconv.Atoi(value); err == nil {
-			cycleMinutes = val
-		}
+	mm := &MinuteMetrics{
+		cycleMinutes: defaultCycleMinutes,
+		multiplier:   1.0,
 	}
-	lazyStrt := os.Getenv("LAZY_START") == "true"
-	interpolate := os.Getenv("INTERPOLATE_VALUES") == "true"
-	timeRelativeToStart := os.Getenv("TIME_RELATIVE_TO_START") != "false"
-	schStr := os.Getenv("SCHEDULE")
-	if schStr == "" {
-		schStr = defaultScheduleStr
-	}
-
-	app := &MinuteMetrics{
-		baseValue:           baseVal,
-		multiplier:          multiplier,
-		lazyStart:           lazyStrt,
-		interpolateValues:   interpolate,
-		timeRelativeToStart: timeRelativeToStart,
-		cycleMinutes:        cycleMinutes,
-	}
-
-	if err := app.parseSchedule(schStr); err != nil {
-		fmt.Printf("Failed to parse schedule from environment variable: %v\n", err)
-		os.Exit(1)
-	}
-
-	return app
+	mm.parseSchedule(defaultScheduleStr)
+	return mm
 }
 
 // Response is the structure for our JSON response, containing name and value fields.
