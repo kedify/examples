@@ -69,7 +69,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	mm.cycleMinutes, _ = mustGetParamValue(paramCycleMinutes, *cycleMinutesFlag)
 	port, _ := mustGetParamValue(paramPort, *portFlag)
 
 	if !mm.lazyStart {
