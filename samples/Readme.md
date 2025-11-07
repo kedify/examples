@@ -3,6 +3,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 
 | Directory                                  | Description                          | Used KEDA scalers                   |
 | ------------------------------------------ | ------------------------------------ | ----------------------------------- |
+| [azul-prp](./azul-prp)                     | This example demonstrates how to vertically scale a Java app running on Azul JVM | Kedify Vertical Scaling |
 | [envoy-http-scaler](./envoy-http-scaler)   | This example demonstrates how to use the already exisiting envoy to scale a deployment based on the request rate  | Kedify Envoy HTTP |
 | [grpc-responder](./grpc-responder)         | This application can be scaled by incoming gRPC traffic, including scale to zero  | Kedify HTTP |
 | [http-server](./http-server)               | This application can be scaled by incoming HTTP (or HTTPS) traffic, including scale to zero  | Kedify HTTP |
