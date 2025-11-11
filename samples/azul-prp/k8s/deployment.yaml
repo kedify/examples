@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heavy-workload
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: heavy-workload
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: heavy-workload
+      annotations:
+        prp.kedify.io/reconcile: enabled
+    spec:
+      containers:
+        - name: main
+          image: ghcr.io/kedify/azul-app:main
+          # initial resources for the workload (lifted)
+          resources:
+            requests:
+              cpu: 1
+            limits:
+              cpu: 1
+          startupProbe:
+            exec:
+              command: 
+              - sh
+              - -c
+              - "[ -f done ] || /ready.py"
+            initialDelaySeconds: 0
+            # read the compilation Q every 2 seconds
+            periodSeconds: 2
+            # python script should respond within 5 seconds
+            timeoutSeconds: 10
+            failureThreshold: 1
+            successThreshold: 1
+          readinessProbe:
+            exec:
+              command: ["test", "-f", "done"]
+            initialDelaySeconds: 10
+            periodSeconds: 10

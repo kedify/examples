@@ -1,0 +1,18 @@
+apiVersion: keda.kedify.io/v1alpha1
+kind: PodResourceProfile
+metadata:
+  name: heavy-workload
+spec:
+  target:
+    kind: deployment
+    name: heavy-workload
+  containerName: main
+  trigger:
+    after: containerReady
+    delay: 0s
+  # these resources will be applied for the workload, once the compilation Q is low enough or all the work has been done
+  newResources:
+    requests:
+      cpu: "0.2"
+    limits:
+      cpu: "0.2"
