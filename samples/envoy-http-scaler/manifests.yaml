@@ -89,21 +89,26 @@ spec:
           value: |-
             stats_flush_interval: 1s
             stats_sinks:
-            - name: kedify_metrics_sink
-              typed_config:
-                "@type": type.googleapis.com/envoy.config.metrics.v3.MetricsServiceConfig
-                transport_api_version: V3
-                report_counters_as_deltas: true
-                emit_tags_as_labels: true
-                grpc_service:
-                  envoy_grpc:
-                    cluster_name: kedify_metrics_service
-                  retry_policy:
-                    retry_back_off:
-                      base_interval: 0.5s
-                      max_interval: 5s
-                    num_retries: 100
-                    retry_on: connect-failure
+            - "name": "kedify_metrics_sink"
+              "typed_config":
+                "@type": "type.googleapis.com/envoy.config.metrics.v3.MetricsServiceConfig"
+                "emit_tags_as_labels": true
+                "grpc_service":
+                  "envoy_grpc":
+                    "cluster_name": "kedify_metrics_service"
+                  "retry_policy":
+                    "host_selection_retry_max_attempts": 1
+                    "num_retries": 2
+                    "retry_back_off":
+                      "base_interval": "0.5s"
+                      "max_interval": "10s"
+                    "retry_host_predicate":
+                    - "name": "envoy.retry_host_predicates.previous_hosts"
+                      "typed_config":
+                        "@type": "type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate"
+                    "retry_on": "5xx,gateway-error,refused-stream,connect-failure"
+                "report_counters_as_deltas": true
+                "transport_api_version": "V3"
             node:
               id: kedify-proxy
               cluster: xds_cluster
@@ -140,24 +145,56 @@ spec:
                         typed_config:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
               clusters:
-              - name: kedify_metrics_service
-                connect_timeout: 2s
-                type: STRICT_DNS
-                lb_policy: ROUND_ROBIN
-                typed_extension_protocol_options:
-                  envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-                    "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-                    explicit_http_config:
-                      http2_protocol_options: {}
-                load_assignment:
-                  cluster_name: kedify_metrics_service
-                  endpoints:
-                  - lb_endpoints:
-                    - endpoint:
-                        address:
-                          socket_address:
-                            address: "keda-add-ons-http-interceptor-kedify-proxy-metric-sink.keda.svc.cluster.local"
-                            port_value: 9901
+              - "circuit_breakers":
+                  "thresholds":
+                  - "max_connections": 5000
+                    "max_pending_requests": 5000
+                    "max_requests": 7000
+                    "max_retries": 5
+                    "priority": "DEFAULT"
+                  - "max_connections": 5000
+                    "max_pending_requests": 5000
+                    "max_requests": 7000
+                    "max_retries": 5
+                    "priority": "HIGH"
+                "connect_timeout": "2s"
+                "dns_refresh_rate": "3600s"
+                "lb_policy": "ROUND_ROBIN"
+                "least_request_lb_config":
+                  "choice_count": 5
+                "load_assignment":
+                  "cluster_name": "kedify_metrics_service"
+                  "endpoints":
+                  - "lb_endpoints":
+                    - "endpoint":
+                        "address":
+                          "socket_address":
+                            "address": "keda-add-ons-http-interceptor-kedify-proxy-metric-sink.keda"
+                            "port_value": 9901
+                "name": "kedify_metrics_service"
+                "outlier_detection":
+                  "base_ejection_time": "60s"
+                  "consecutive_5xx": 5
+                  "interval": "15s"
+                  "max_ejection_percent": 25
+                  "split_external_local_origin_errors": true
+                "per_connection_buffer_limit_bytes": 52428800
+                "type": "STRICT_DNS"
+                "typed_extension_protocol_options":
+                  "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
+                    "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+                    "explicit_http_config":
+                      "http2_protocol_options":
+                        "allow_connect": true
+                        "connection_keepalive":
+                          "connection_idle_interval": "60s"
+                          "interval": "60s"
+                          "timeout": "5s"
+                "upstream_connection_options":
+                  "tcp_keepalive":
+                    "keepalive_interval": 10
+                    "keepalive_probes": 5
+                    "keepalive_time": 60
               - name: test
                 connect_timeout: 10s
                 type: STRICT_DNS

@@ -1,0 +1,377 @@
+# Chain Scaling
+#
+# kubectl exec -it curl -- curl -I http://frontend:8080/proxy/backend-a:8080/proxy/backend-b:8080/proxy/backend-c:8080
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl:latest
+    command: [ "sleep", "infinity" ]
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: RESPONSE_DELAY
+              value: "0.3"
+          readinessProbe:
+            initialDelaySeconds: 5
+            httpGet:
+              path: /
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-fallback
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+  selector:
+    app: frontend
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  cooldownPeriod: 1
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  pollingInterval: 3
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 1
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: frontend
+      service: frontend
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1"
+      granularity: 1s
+      window: 120s
+      trafficAutowire: service
+      fallbackService: frontend-fallback
+      loadbalancing: eds
+---
+# Backend A Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-a
+  template:
+    metadata:
+      labels:
+        app: backend-a
+    spec:
+      containers:
+        - name: backend-a
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: RESPONSE_DELAY
+              value: "0.3"
+          readinessProbe:
+            initialDelaySeconds: 5
+            httpGet:
+              path: /
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-a
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-a-fallback
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+  selector:
+    app: backend-a
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: backend-a
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-a
+  cooldownPeriod: 1
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  pollingInterval: 3
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 1
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: backend-a
+      service: backend-a
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1"
+      granularity: 1s
+      window: 60s
+      trafficAutowire: service
+      fallbackService: backend-a-fallback
+      loadbalancing: eds
+---
+# Backend B Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-b
+  template:
+    metadata:
+      labels:
+        app: backend-b
+    spec:
+      containers:
+        - name: backend-b
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: RESPONSE_DELAY
+              value: "0.3"
+          readinessProbe:
+            initialDelaySeconds: 5
+            httpGet:
+              path: /
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-b
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-b-fallback
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+  selector:
+    app: backend-b
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: backend-b
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-b
+  cooldownPeriod: 1
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  pollingInterval: 3
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 1
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: backend-b
+      service: backend-b
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1"
+      granularity: 1s
+      window: 60s
+      trafficAutowire: service
+      fallbackService: backend-b-fallback
+      loadbalancing: eds
+---
+# Backend C Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-c
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-c
+  template:
+    metadata:
+      labels:
+        app: backend-c
+    spec:
+      containers:
+        - name: backend-c
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: RESPONSE_DELAY
+              value: "0.3"
+          readinessProbe:
+            initialDelaySeconds: 5
+            httpGet:
+              path: /
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-c
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-c-fallback
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP
+  selector:
+    app: backend-c
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: backend-c
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-c
+  cooldownPeriod: 1
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  pollingInterval: 3
+  advanced:                                              
+    restoreToOriginalReplicaCount: true            
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 1
+  triggers:
+  - type: kedify-http
+    metadata:
+      hosts: backend-c
+      service: backend-c
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1"
+      granularity: 1s
+      window: 60s
+      trafficAutowire: service
+      fallbackService: backend-c-fallback
+      loadbalancing: eds
+---

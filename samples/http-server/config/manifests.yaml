@@ -16,6 +16,13 @@ spec:
         - name: http-server
           image: ghcr.io/kedify/sample-http-server:latest
           imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
           ports:
             - name: http
               containerPort: 8080
