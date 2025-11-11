@@ -96,6 +96,37 @@ func delayExpired(timeout time.Duration) bool {
 	return time.Since(startDelayTimeout) > timeout
 }
 
+func proxyHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("/proxy received request from[%v] path[%v] host[%v]", r.RemoteAddr, r.URL.Path, r.Host)
+	requests.WithLabelValues("/proxy").Inc()
+	delay := getDelay()
+	delayHistogram.Observe(delay.Seconds())
+	time.Sleep(delay)
+
+	targetURL := "http://" + r.PathValue("rest")
+	log.Printf("Proxying request to: %s", targetURL)
+	req, err := http.NewRequest(r.GET, targetURL, nil)
+	req.Header["Host"] = r.URL.Host
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching URL: %v", err), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	for name, values := range resp.Header {
+		for _, v := range values {
+			w.Header().Add(name, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, err = httputil.DumpResponse(resp, true)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading response: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
 var (
 	// delays
 	startDelayTimeout = time.Now()
@@ -206,6 +237,7 @@ func main() {
 	mux.HandleFunc("/echo", echoHandler)
 	mux.HandleFunc("/info", infoHandler)
 	mux.HandleFunc("/error", errorHandler)
+	mux.HandleFunc("/proxy/{rest...}", proxyHandler)
 	mux.Handle("/metrics", promhttp.Handler())
 
 	addr := ":8080"
