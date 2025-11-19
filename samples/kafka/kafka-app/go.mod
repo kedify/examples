@@ -1,6 +1,6 @@
 module github.com/kedify/examples/kafka/kafka-app
 
-go 1.17
+go 1.24.0
 
 require github.com/Shopify/sarama v1.31.1
 
@@ -19,6 +19,6 @@ require (
 	github.com/klauspost/compress v1.14.2 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838 // indirect
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 )
