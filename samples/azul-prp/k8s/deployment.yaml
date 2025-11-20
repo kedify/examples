@@ -19,6 +19,10 @@ spec:
       containers:
         - name: main
           image: ghcr.io/kedify/azul-app:main
+          # Additional JVM options to be passed to the JVM
+          #env:
+          #  - name: JDK_JAVA_OPTIONS
+          #    value: "-Xmx512m -XX:+UseG1GC"
           # initial resources for the workload (lifted)
           resources:
             requests:
