@@ -19,7 +19,7 @@ spec:
       containers:
         - name: main
           image: ghcr.io/kedify/azul-app:main
-          # Additional arguments to be passed to JVM
+          # Additional JVM options to be passed to the JVM
           #env:
           #  - name: JDK_JAVA_OPTIONS
           #    value: "-Xmx512m -XX:+UseG1GC"
