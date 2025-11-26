@@ -2,7 +2,7 @@
 
 This example serves as a guide on how to use KEDA + http-add-on to autoscale applications based on HTTP traffic along with Istio.
 
-As a prerequisite, you will need a Kubernetes cluster with istio. Could be any istio supported Kubernetes distribution, for [example k3d](https://istio.io/latest/docs/setup/platform-setup/k3d/).
+As a prerequisite, you will need a Kubernetes cluster with Istio. Could be any Istio supported Kubernetes distribution, for [example k3d](https://istio.io/latest/docs/setup/platform-setup/k3d/).
 For the purpose of this walkthrough example, all three `istio-base`, `istiod`, and `istio-ingressgateway` are necessary.
 ```
 $ kubectl create ns istio-system
@@ -15,8 +15,8 @@ $ helm install istiod istio/istiod -n istio-system --wait
 $ helm install istio-ingressgateway istio/gateway -n istio-system --wait
 ```
 
-##### Step 1: Prepare istio sidecar injection
-At the time of writing the tutorial, istio ambient mesh is still in [alpha status](https://istio.io/v1.19/docs/ops/ambient/getting-started/) so we will continue with the sidecar istio.
+##### Step 1: Prepare Istio sidecar injection
+At the time of writing the tutorial, Istio ambient mesh is still in [alpha status](https://istio.io/v1.19/docs/ops/ambient/getting-started/) so we will continue with the sidecar Istio.
 The application is going to be deployed in `default` `Namespace` and KEDA will be in `keda` `Namespace`, let's enable it for all pods in these namespaces.
 
 ```
@@ -34,7 +34,7 @@ $ helm install keda kedacore/keda --namespace keda
 $ helm install http-add-on kedacore/keda-add-ons-http --namespace keda
 ```
 
-There should be KEDA now installed and running together with http-add-on
+KEDA should now be installed and running together with http-add-on
 ```
 $ kubectl get po -nkeda
 NAME                                                    READY   STATUS    RESTARTS   AGE
@@ -53,17 +53,17 @@ keda-operator-metrics-apiserver-86cc9c6fff-t4prd        2/2     Running   0     
 ##### Step 3: Deploy sample application
 
 [Podinfo](https://github.com/stefanprodan/podinfo) is a great testing application, we will use it here because it's small, simple to use and
-simple to inspect. Its output ca provide helpful insight into the `Pod` internals.
+simple to inspect. Its output can provide helpful insight into the `Pod` internals.
 ```
 $ helm upgrade --install --wait podinfo --namespace default oci://ghcr.io/stefanprodan/charts/podinfo
 ```
 
-Let's expose it using istio `VirtualService`.
+Let's expose it using Istio `VirtualService`.
 ```
 $ kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/samples/http-add-on_with_istio/manifests/istio.yaml
 ```
 
-Your application should be now available on the istio gateway IP address under host www.podinfo.com.
+Your application should be now available on the Istio gateway IP address under host www.podinfo.com.
 ```
 $ GATEWAY_IP=$(kubectl get svc -nistio-system istio-ingressgateway -o json | jq --raw-output '.status.loadBalancer.ingress[0].ip')
 $ curl -H "host: www.podinfo.com" "http://$GATEWAY_IP"
@@ -84,7 +84,7 @@ $ curl -H "host: www.podinfo.com" "http://$GATEWAY_IP"
 }
 ```
 
-The `podinfo` is running in `default` `Namespace` with the istio sidecar injected and operational.
+The `podinfo` is running in `default` `Namespace` with the Istio sidecar injected and operational.
 ```
 $ kubectl get po -ndefault
 NAME                       READY   STATUS    RESTARTS   AGE
@@ -93,7 +93,7 @@ podinfo-5965fc9856-4tfpg   2/2     Running   0          22s
 
 ##### Step 4: Start autoscaling
 
-First we will need to create `HTTPScaledObject` to tell KEDA and http-add-on what metrics to use and which `Deployment` to scale
+First we will need to create `HTTPScaledObject` to tell KEDA and http-add-on what metrics to use and which `Deployment` to scale.
 ```
 $ kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/samples/http-add-on_with_istio/manifests/httpscaledobject.yaml
 ```
@@ -105,14 +105,14 @@ NAME      READY   UP-TO-DATE   AVAILABLE   AGE
 podinfo   0/0     0            0           2m
 ```
 
-As a second step, we need to reconfigure the istio `VirtualService` to pass the traffic first to http-add-on which then routes
+As a second step, we need to reconfigure the Istio `VirtualService` to pass the traffic first to http-add-on which then routes
 the traffic to `podinfo` application.
 
 ```
 $ kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/samples/http-add-on_with_istio/manifests/virtualservice_through_keda.yaml
 ```
 
-When querying the `podinfo` now, there is going to be additional delay in the response coming from the cold start of the first `Pod`
+When querying the `podinfo` now, there is going to be an additional delay in the response coming from the cold start of the first `Pod`
 ```
 $ time curl -H "host: www.podinfo.com" "http://$GATEWAY_IP"
 {
@@ -134,12 +134,12 @@ sys     0m0.004s
 ```
 The `interceptor` caches the request for `podinfo` and releases it as soon as the first `Pod` is available to handle the traffic.
 
-##### Istio `NetworkPolicies`
+##### Step 5: Istio `NetworkPolicies`
 
-`NetworkPolicies` are frequently used together with istio service mesh. Given application traffic used in the KEDA http based scaling must flow
+`NetworkPolicies` are frequently used together with istio service mesh. Given that application traffic used in KEDA HTTP-based scaling must flow
 through the http-add-on's `interceptor`, depending on your policies, you may need to enable this network path explicitly.
 
-For KEDA `interceptor` egress rules
+For KEDA `interceptor` egress rules:
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -165,7 +165,7 @@ spec:
   policyTypes:
   - Egress
 ```
-And or for application ingress rules
+For application ingress rules
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
