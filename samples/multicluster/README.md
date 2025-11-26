@@ -1,6 +1,6 @@
 # Multi-cluster Scaling
 
-This example demonstrates how to set up a multi-cluster environment using k3d and scale applications based on custom metrics using Kedify. The setup includes one KEDA k3d cluster and three member k3d clusters, running an instance of a sample application workload. KEDA is configured to monitor a mock metrics and scale the application pods accordingly across the member fleet.
+This example demonstrates how to set up a multi-cluster environment using k3d and scale applications based on custom metrics using Kedify. The setup includes one KEDA k3d cluster and three member k3d clusters, running an instance of a sample application workload. KEDA is configured to monitor a mock metric and scale the application pods accordingly across the member fleet.
 
 ### Setup
 
@@ -54,7 +54,7 @@ KUBECONFIG=/tmp/keda-cluster kubectl kedify mc list-members
 
 5. **Configure Multi-cluster Scaling**:
 
-In the KEDA cluster, create a `DistributedScaledObject` that references the deployments in the member clusters. We are going to use `kubernetes-resource` trigger type to scale based on a mock metric stored in a `ConfigMap` because this is very convenient for demonstrating the mutli-cluster scaling properties.
+In the KEDA cluster, create a `DistributedScaledObject` that references the deployments in the member clusters. We are going to use `kubernetes-resource` trigger type to scale based on a mock metric stored in a `ConfigMap` because this is very convenient for demonstrating the multi-cluster scaling properties.
 Below is an example YAML configuration, this will be applied to the KEDA cluster which will perform the scaling across the member clusters:
 
 ```bash
