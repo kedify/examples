@@ -15,7 +15,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 | [websocket-server](./websocket-server)     | This application can be scaled by incoming Websocket traffic | Kedify HTTP |
 | [work-simulator](./work-simulator)         | This application simulates work tasks and can be scaled based on custom Prometheus metrics | Prometheus |
 | [scaling-group](./scaling-group)           | This example demonstrates how to limit scaling of a group of ScaledObjects with ScalingGroup | Kedify |
-| [multicluster](./multicluster)             | This example demonstrates how to use Kedify in a multi-cluster setup to scale an applications across a fleet of clusters | Kedify |
+| [multicluster](./multicluster)             | This example demonstrates how to use Kedify in a multi-cluster setup to scale applications across a fleet of clusters | Kedify |
 
 
 # Externally located sample applications that use KEDA
