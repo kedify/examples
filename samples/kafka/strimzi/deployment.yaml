@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: kafka-strimzi-consumer
-        image: quay.io/zroubalik/kafka-app:latest
+        image: ghcr.io/kedify/sample-kafka-app:latest
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

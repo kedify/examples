@@ -21,7 +21,7 @@ In KEDA instance in `keda` namespace.
  ```
  2. Create a Kafka instance by running following command, this will create Kafka instance `my-cluster` in `kafka` namespace. You can run the following command to do so:
  ```bash
- k apply -f kafka.yaml
+kubectl apply -f https://strimzi.io/examples/latest/kafka/kafka-single-node.yaml -n kafka 
  ```
  3. Wait until the Kafka cluster is ready, you can monitor the `READY` status field on `my-cluster` kafka resource until it is `True`.
  ```bash
@@ -29,10 +29,10 @@ In KEDA instance in `keda` namespace.
  ``` 
  You should see the similar ouput, not that `READY` is `True`:
  ```bash
- Every 2,0s: kget kafka.kafka.strimzi.io/my-cluster -n kafka
+Every 2,0s: kubectl get kafka.kafka.strimzi.io/my-cluster -n kafka
 
- NAME         DESIRED KAFKA REPLICAS   DESIRED ZK REPLICAS   READY   WARNINGS
- my-cluster   3                        3                     True
+NAME         READY   METADATA STATE   WARNINGS
+my-cluster   True
  ```
  4. Create Kafka Topic `my-topic`, in order to allow Kafka Consumer autoscaling, you need to set the number of partitions to number greater than `1`. The number of partitions equals the maximum number of Kafka Consumer instances. In our example, set it to `5` partitions. Following command creates the topic with proper partitions count:
  ```bash
@@ -122,13 +122,13 @@ watch kubectl get deployment.apps/kafka-strimzi-consumer
 
 The output should be similar:
 ```bash
-Every 2,0s: kget deployment.apps/kafka-strimzi-consumer
+Every 2,0s: kubectl get deployment.apps/kafka-strimzi-consumer
 NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
 kafka-strimzi-consumer      5/5     5            5           21m
 
 ### After some time the application should be autoscaled back to 0
 
-Every 2,0s: kget deployment.apps/kafka-strimzi-consumer
+Every 2,0s: kubectl get deployment.apps/kafka-strimzi-consumer
 NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
 kafka-strimzi-consumer      0/0     0            0           23m
 ```
@@ -140,7 +140,7 @@ k delete jobs --field-selector status.successful=1
 k delete -f scaledobject.yaml
 k delete -f deployment.yaml
 k delete -f topic.yaml
-k delete -f kafka.yaml
+k delete -f kafka.kafka.strimzi.io/my-cluster -n kafka
 ``` 
 
 ## APPENDIX: Fallback
@@ -171,17 +171,17 @@ k apply -f scaledobject-fallback.yaml
 2. Introduce a failure in the external service, ie. delete Kafka topic and cluster:
 ```bash
 k delete -f topic.yaml
-k delete -f kafka.yaml
+k delete kafka.kafka.strimzi.io/my-cluster -n kafka
 ```
 
 3. Watch the Kafka Consumer application to check that number of replicas, it should start with 0 replicas if there is no load:
 ```bash
-watch kget deployment.apps/kafka-strimzi-consumer
+watch kubectl get deployment.apps/kafka-strimzi-consumer
 ```
 
 4. After some time it should scale to 2 replicas (fallback). In this specific example those replicas aren't indeed fully ready because they are not able to connect to non existent Kafka cluster.
 ```bash
-Every 2,0s: kget deployment.apps/kafka-strimzi-consumer
+Every 2,0s: kubectl get deployment.apps/kafka-strimzi-consumer
 
 NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
 kafka-strimzi-consumer      0/2     2            0           21m

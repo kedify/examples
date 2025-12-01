@@ -1,4 +1,4 @@
-FROM golang:1.17 as builder
+FROM golang:1.24 AS builder
 
 WORKDIR /workspace
 
@@ -12,11 +12,9 @@ COPY vendor/ vendor/
 
 RUN make build
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM gcr.io/distroless/base-debian12:nonroot
 WORKDIR /
 COPY --from=builder /workspace/kafkaconsumerapp .
 COPY --from=builder /workspace/kafkaproducerapp .
-# 65532 is numeric for nonroot
-USER 65532:65532
 
 ENTRYPOINT ["/kafkaconsumerapp"]
