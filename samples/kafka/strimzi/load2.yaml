@@ -16,7 +16,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: kafka-strimzi-producer
-        image: quay.io/zroubalik/kafka-app:latest
+        image: ghcr.io/kedify/sample-kafka-app:latest
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

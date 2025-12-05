@@ -1,4 +1,5 @@
-IMAGE ?= quay.io/zroubalik/kafka-app
+APP_NAME := kafka-app
+IMG := ghcr.io/kedify/sample-$(APP_NAME)
 
 ARCH       ?=amd64
 TARGET_OS  ?=linux
@@ -21,13 +22,20 @@ producer:
 consumer:
 	go build -o kafkaconsumerapp cmd/kafkaconsumerapp/main.go
 
+.PHONY: docker-build
+docker-build:
+	docker build -t $(IMG) .
+
+.PHONY: docker-push
+docker-push:
+	docker buildx build --output=type=registry --platform=linux/amd64,linux/arm64 -t $(IMG) .
+
+# Legacy targets for backward compatibility
 .PHONY: image
-image: image-build image-push
+image: docker-build docker-push
 
 .PHONY: image-build
-image-build:
-	docker build -t ${IMAGE} .
+image-build: docker-build
 
 .PHONY: image-push
-image-push:
-	docker push ${IMAGE}
+image-push: docker-push

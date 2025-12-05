@@ -1,5 +1,5 @@
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
-apiVersion: kafka.strimzi.io/v1beta2
 metadata:
   name: my-topic
   labels:
@@ -7,13 +7,13 @@ metadata:
   namespace: kafka
 spec:
   partitions: 5
-  replicas: 3
+  replicas: 1
   config:
-    retention.ms: 604800000
+    retention.ms: 7200000
     segment.bytes: 1073741824
 #---
 #kind: KafkaTopic
-#apiVersion: kafka.strimzi.io/v1beta2
+#apiVersion: kafka.strimzi.io/v1
 #metadata:
 #  name: my-topic2
 #  labels:

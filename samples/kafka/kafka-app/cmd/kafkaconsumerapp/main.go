@@ -9,7 +9,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/kedify/examples/kafka/kafka-app/internal/kafkaconsumer"
 )
 
