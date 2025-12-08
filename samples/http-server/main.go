@@ -105,8 +105,12 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	targetURL := "http://" + r.PathValue("rest")
 	log.Printf("Proxying request to: %s", targetURL)
-	req, err := http.NewRequest(r.GET, targetURL, nil)
-	req.Header["Host"] = r.URL.Host
+	req, err := http.NewRequest(r.Method, targetURL, nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating request: %v", err), http.StatusInternalServerError)
+		return
+	}
+	req.Header["Host"] = []string{r.URL.Host}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching URL: %v", err), http.StatusBadGateway)
@@ -327,6 +331,16 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	delayHistogram.Observe(delay.Seconds())
 	time.Sleep(delay)
 	w.Header().Set("Content-Type", "text/html")
+	if pn := os.Getenv("POD_NAME"); pn != "" {
+		w.Header().Set("X-Pod-Name", pn)
+	}
+	if pn := os.Getenv("POD_NAMESPACE"); pn != "" {
+		w.Header().Set("X-Pod-Namespace", pn)
+	}
+	if pi := os.Getenv("POD_IP"); pi != "" {
+		w.Header().Set("X-Pod-IP", pi)
+	}
+
 	htmlContent := `
 		<!DOCTYPE html>
 		<html>
