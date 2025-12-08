@@ -3,7 +3,8 @@ settings:
   # logs:
   #   logLvl: debug
 
-opentelemetry-collector:
+otelCollector:
+  enabled: true
   clusterRole:
     create: true
     # additional rbac for upstream otel collector to be able to find pods w/ prometheus.io/scrape annotation
@@ -19,8 +20,6 @@ opentelemetry-collector:
        - 'watch'
   alternateConfig:
     receivers:
-      opencensus:
-      
       # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/prometheusreceiver/README.md
       prometheus:
         config:
@@ -38,7 +37,7 @@ opentelemetry-collector:
                   target_label: pod_name
     exporters:
       otlp:
-        endpoint: keda-otel-scaler.keda.svc:4317
+        endpoint: kedify-otel.keda.svc:4317
         #compression: "none"
 
     service:

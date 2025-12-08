@@ -21,7 +21,7 @@ spec:
     - type: kedify-otel
       metadata:
         # was serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
-        scalerAddress: keda-otel-scaler.keda.svc:4318
+        scalerAddress: kedify-otel.keda.svc:4318
         
         # was query: .., the PromQL query itself is the same
         metricQuery: sum(work_simulator_inprogress_tasks{job="work-simulator"})
