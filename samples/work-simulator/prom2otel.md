@@ -44,7 +44,7 @@ helm uninstall kube-prometheus-stack -n monitoring
 Helm Chart for KEDA OTel Scaler can install and configure also the OTel Collector. To do that run the following command:
 
 ```
-helm upgrade --install kedify-otel oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.2 -nkeda -f config/otel-scaler-values.yaml
+helm upgrade --install kedify-otel oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.3 -nkeda -f config/otel-scaler-values.yaml
 ```
 
 If you inspect the helm chart values, it contains the configuration for OTel collector. It consist of four main sections:
