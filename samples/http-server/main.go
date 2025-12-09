@@ -370,7 +370,14 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	delay := getDelay()
 	delayHistogram.Observe(delay.Seconds())
 	time.Sleep(delay)
-	http.ServeFile(w, r, "kedify-loves-keda.gif")
+
+	// Try container path first, then local path (for go run)
+	imagePath := "/kedify-loves-keda.gif"
+	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+		imagePath = "./kedify-loves-keda.gif"
+	}
+
+	http.ServeFile(w, r, imagePath)
 }
 
 func echoHandler(w http.ResponseWriter, r *http.Request) {
