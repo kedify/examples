@@ -183,3 +183,58 @@ spec:
         targetValue: "5"
 EOF
 ```
+
+9. **Scale Jobs with DistributedScaledJob resource**:
+
+You can also use `DistributedScaledJob` to scale jobs across multiple clusters. This example demonstrates how to use kubernetes resource triggers to schedule job scaling across member clusters:
+
+```bash
+cat <<EOF | KUBECONFIG=/tmp/keda-cluster kubectl apply -f -
+kind: DistributedScaledJob
+apiVersion: keda.kedify.io/v1alpha1
+metadata:
+  name: nginx
+spec:
+  memberClusters:
+    - name: k3d-member-1
+    - name: k3d-member-2
+  scaledJobSpec:
+    minReplicaCount: 0
+    maxReplicaCount: 10
+    pollingInterval: 10
+    rollout:
+      propagationPolicy: foreground
+      strategy: gradual
+    scalingStrategy:
+      multipleScalersCalculation: sum
+    successfulJobsHistoryLimit: 2
+    failedJobsHistoryLimit: 2
+    triggers:
+    - type: kubernetes-resource
+      metadata:
+        resourceKind: ConfigMap
+        resourceName: mock-metric
+        key: metric-value
+        targetValue: "5"
+    jobTargetRef:
+      activeDeadlineSeconds: 96000
+      backoffLimit: 0
+      completions: 1
+      parallelism: 1
+      template:
+        spec:
+          containers:
+          - name: busybox
+            imagePullPolicy: IfNotPresent
+            image: busybox
+            command: ["sh", "-c", "echo 'Hello from busybox' && sleep 33"]
+          restartPolicy: Never
+EOF
+```
+
+The `DistributedScaledJob` will create and manage jobs across the specified member clusters based on the kubernetes resource triggers. You can monitor the jobs in each member cluster:
+```bash
+for i in 1 2; do
+  KUBECONFIG=/tmp/member-cluster-$i kubectl get jobs
+done
+```
