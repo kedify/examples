@@ -190,10 +190,17 @@ You can also use `DistributedScaledJob` to scale jobs across multiple clusters. 
 
 ```bash
 cat <<EOF | KUBECONFIG=/tmp/keda-cluster kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mock-metric
+data:
+  metric-value: "20"
+---
 kind: DistributedScaledJob
 apiVersion: keda.kedify.io/v1alpha1
 metadata:
-  name: nginx
+  name: dsj-example
 spec:
   memberClusters:
     - name: k3d-member-1
@@ -205,8 +212,6 @@ spec:
     rollout:
       propagationPolicy: foreground
       strategy: gradual
-    scalingStrategy:
-      multipleScalersCalculation: sum
     successfulJobsHistoryLimit: 2
     failedJobsHistoryLimit: 2
     triggers:
