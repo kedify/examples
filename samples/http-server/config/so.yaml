@@ -29,4 +29,3 @@ spec:
       targetValue: "10"
       granularity: 1s
       window: 10s
-#      trafficAutowire: "false"
