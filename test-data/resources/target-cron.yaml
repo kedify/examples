@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kedify-sample-cron
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kedify-sample-cron
+  template:
+    metadata:
+      labels:
+        app: kedify-sample-cron
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
