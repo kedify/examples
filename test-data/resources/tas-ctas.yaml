@@ -1,0 +1,326 @@
+# ConfigMap for TriggerAuthentication
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-configmap
+data:
+  someKey: "randomValue12345"
+---
+# ConfigMap in keda namespace for ClusterTriggerAuthentication
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-configmap-keda
+  namespace: keda
+data:
+  someKey: "randomValue12345"
+---
+# Secret for TriggerAuthentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-secret
+type: Opaque
+data:
+  someKey: cmFuZG9tVmFsdWU2Nzg5  # Base64 encoded "randomValue6789"
+---
+# Secret in keda namespace for ClusterTriggerAuthentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-secret-keda
+  namespace: keda
+type: Opaque
+data:
+  someKey: cmFuZG9tVmFsdWU2Nzg5  # Base64 encoded "randomValue6789"
+---
+# TriggerAuthentication with AWS Pod Identity
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-aws-pod-identity
+spec:
+  podIdentity:
+    provider: aws
+---
+# ClusterTriggerAuthentication with AWS Pod Identity
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-aws-pod-identity
+spec:
+  podIdentity:
+    provider: aws
+---
+# TriggerAuthentication with GCP Pod Identity
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-gcp-pod-identity
+spec:
+  podIdentity:
+    provider: gcp
+---
+# ClusterTriggerAuthentication with GCP Pod Identity
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-gcp-pod-identity
+spec:
+  podIdentity:
+    provider: gcp
+---
+# TriggerAuthentication with Azure Workload Pod Identity
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-azure-workload-pod-identity
+spec:
+  podIdentity:
+    provider: azure-workload
+---
+# ClusterTriggerAuthentication with Azure Workload Pod Identity
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-azure-workload-pod-identity
+spec:
+  podIdentity:
+    provider: azure-workload
+---
+# TriggerAuthentication with ConfigMap
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-configmap
+spec:
+  configMapTargetRef:
+  - parameter: someParameter
+    name: example-configmap
+    key: someKey
+---
+# ClusterTriggerAuthentication with ConfigMap
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-configmap
+spec:
+  configMapTargetRef:
+  - parameter: someParameter
+    name: example-configmap-keda
+    key: someKey
+---
+# TriggerAuthentication with Secret
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-secret
+spec:
+  secretTargetRef:
+  - parameter: someParameter
+    name: example-secret
+    key: someKey
+---
+# ClusterTriggerAuthentication with Secret
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-secret
+spec:
+  secretTargetRef:
+  - parameter: someParameter
+    name: example-secret-keda
+    key: someKey
+---
+# Combined TriggerAuthentication
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-combined
+spec:
+  podIdentity:
+    provider: aws
+  secretTargetRef:
+  - parameter: secretParameter
+    name: example-secret
+    key: someKey
+---
+# Combined ClusterTriggerAuthentication
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-combined
+spec:
+  podIdentity:
+    provider: aws
+  secretTargetRef:
+  - parameter: secretParameter
+    name: example-secret-keda
+    key: someKey
+---
+# Combined TriggerAuthentication
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-combined2
+spec:
+  podIdentity:
+    provider: aws
+  configMapTargetRef:
+  - parameter: configMapParameter
+    name: example-configmap
+    key: someKey
+  secretTargetRef:
+  - parameter: secretParameter
+    name: example-secret
+    key: someKey
+---
+# Combined ClusterTriggerAuthentication
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-combined2
+spec:
+  podIdentity:
+    provider: aws
+  configMapTargetRef:
+  - parameter: configMapParameter
+    name: example-configmap-keda
+    key: someKey
+  secretTargetRef:
+  - parameter: secretParameter
+    name: example-secret-keda
+    key: someKey
+
+---
+# All TriggerAuthentication
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: trigger-auth-all
+spec:
+  podIdentity:
+    provider: aws
+  secretTargetRef:
+  - parameter: secretParameter
+    name: example-secret-keda
+    key: someKey
+  # configMapTargetRef:
+  # - parameter: configMapParameter
+  #   name: example-configmap
+  #   key: someKey
+  env:
+    - parameter: example-param
+      name: EXAMPLE_ENV_VAR
+      containerName: example-container
+  hashiCorpVault:
+    address: "http://vault-example:8200"
+    authentication: token
+    secrets:
+      - parameter: example-param
+        key: secret/data/example
+        path: example-secret-path
+  azureKeyVault:
+    vaultUri: "https://example-vault.vault.azure.net"
+    credentials:
+      clientId: example-client-id
+      clientSecret:
+        valueFrom:
+          secretKeyRef:
+            name: example-azure-secret
+            key: client-secret
+      tenantId: example-tenant-id
+    secrets:
+      - parameter: example-param
+        name: example-secret-name
+  # awsSecretManager:
+  #   credentials:
+  #     accessKey:
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: example-aws-secret
+  #           key: AWS_ACCESS_KEY_ID
+  #     accessSecretKey:
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: example-aws-secret
+  #           key: AWS_SECRET_ACCESS_KEY
+  #   secrets:
+  #     - parameter: example-param
+  #       name: example-secret-name
+  # gcpSecretManager:
+  #   secrets:
+  #     - parameter: example-param
+  #       id: example-secret-id
+  #   credentials:
+  #     clientSecret:
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: example-gcp-secret
+  #           key: client-secret
+---
+# All ClusterTriggerAuthentication
+apiVersion: keda.sh/v1alpha1
+kind: ClusterTriggerAuthentication
+metadata:
+  name: cluster-trigger-auth-all
+spec:
+  podIdentity:
+    provider: aws
+  secretTargetRef:
+  - parameter: secretParameter
+    name: example-secret-keda
+    key: someKey
+  # configMapTargetRef:
+  # - parameter: configMapParameter
+  #   name: example-configmap
+  #   key: someKey
+  env:
+    - parameter: example-param
+      name: EXAMPLE_ENV_VAR
+      containerName: example-container
+  hashiCorpVault:
+    address: "http://vault-example:8200"
+    authentication: token
+    secrets:
+      - parameter: example-param
+        key: secret/data/example
+        path: example-secret-path
+  azureKeyVault:
+    vaultUri: "https://example-vault.vault.azure.net"
+    credentials:
+      clientId: example-client-id
+      clientSecret:
+        valueFrom:
+          secretKeyRef:
+            name: example-azure-secret
+            key: client-secret
+      tenantId: example-tenant-id
+    secrets:
+      - parameter: example-param
+        name: example-secret-name
+  # awsSecretManager:
+  #   credentials:
+  #     accessKey:
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: example-aws-secret
+  #           key: AWS_ACCESS_KEY_ID
+  #     accessSecretKey:
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: example-aws-secret
+  #           key: AWS_SECRET_ACCESS_KEY
+  #   secrets:
+  #     - parameter: example-param
+  #       name: example-secret-name
+  # gcpSecretManager:
+  #   secrets:
+  #     - parameter: example-param
+  #       id: example-secret-id
+  #   credentials:
+  #     clientSecret:
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: example-gcp-secret
+  #           key: client-secret

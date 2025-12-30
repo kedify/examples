@@ -1,0 +1,25 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: kedify-sample-so    
+spec:
+  scaleTargetRef:           
+    name: kedify-sample-app              
+  pollingInterval:  10                                      
+  cooldownPeriod:   5                                                                        
+  minReplicaCount: 0                                       
+  maxReplicaCount: 10     
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 15                             
+  triggers:
+  - type: metrics-api
+    metadata:
+      #url: "http://kedify-sample-minute-metrics.default.svc.cluster.local/api/v1/staticmetrics"
+      url: "http://kedify-sample-minute-metrics.default.svc.cluster.local/api/v1/minutemetrics"
+      valueLocation: "value"
+      targetValue: '1'

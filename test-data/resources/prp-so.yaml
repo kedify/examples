@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          requests:
+            memory: 30M
+            cpu: 50m
+          limits:
+            memory: 500M
+            cpu: 200m
+---
+apiVersion: keda.kedify.io/v1alpha1
+kind: PodResourceProfile
+metadata:
+  name: nginx-active
+spec:
+  target:
+    kind: scaledobject
+    name: nginx
+  containerName: nginx
+  trigger:
+    after: activated
+    delay: 0s
+  newResources:
+    requests:
+      memory: 250M
+---
+apiVersion: keda.kedify.io/v1alpha1
+kind: PodResourceProfile
+metadata:
+  name: nginx-standby
+spec:
+  target:
+    kind: scaledobject
+    name: nginx
+  containerName: nginx
+  trigger:
+    after: deactivated
+    delay: 5s
+  newResources:
+    requests:
+      memory: 30M
+---
+kind: ScaledObject
+apiVersion: keda.sh/v1alpha1
+metadata:
+  name: nginx
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  triggers:
+    - type: kedify-http
+      metadata:
+        hosts: www.my-app.com
+        service: http-demo-service
+        port: "8080"
+        scalingMetric: requestRate
+        targetValue: "10"

@@ -30,10 +30,10 @@ spec:
             value: my-cluster-kafka-bootstrap.kafka.svc:9092
         resources:
             requests:
-              cpu: 100m
-              memory: 100Mi
+              cpu: 50m
+              memory: 50Mi
             limits:
-              cpu: 500m
-              memory: 500Mi
+              cpu: 200m
+              memory: 200Mi
         command:
         - /kafkaconsumerapp

@@ -1,0 +1,201 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mm
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mm
+  template:
+    metadata:
+      labels:
+        app: mm
+    spec:
+      containers:
+        - name: main
+          image: ghcr.io/kedify/sample-minute-metrics
+          ports:
+            - containerPort: 8080
+          env:
+            - name: INTERPOLATE_VALUES
+              value: "true"
+            - name: TIME_RELATIVE_TO_START
+              value: "false"
+            - name: CYCLE_MINUTES
+              value: "1440"
+            - name: SCHEDULE
+              # simulating two traffic peaks during a day
+              value: "0:2,60:4,120:5,180:13,240:38,300:109,360:329,420:715,480:1408,540:2001,600:2393,660:2111,720:1450,780:888,840:682,900:744,960:1053,1020:1485,1080:1777,1140:1876,1200:1655,1260:1209,1320:836,1380:445,1410:100"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mm
+  namespace: default
+spec:
+  selector:
+    app: mm
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+# ScaledObject that has two triggers and scaling modifiers that takes the average from the two:
+# - one that obtains the metric from metric-api and at the same time feeds this metric to kedify-predictor (where we create a model for this timeseries)
+# - second that takes forecasted value from the trained model
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: mm
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: demo
+  pollingInterval: 10
+  cooldownPeriod: 5
+  minReplicaCount: 0
+  maxReplicaCount: 6
+  advanced:
+    scalingModifiers:
+      formula: "(mm + mmInTenMinutes)/2"
+      target: "400"
+      metricType: "AverageValue"
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+        scaleDown:
+          stabilizationWindowSeconds: 0
+  triggers:
+    - type: metrics-api
+      name: mm
+      metadata:
+        url: "http://mm.default.svc.cluster.local/api/v1/minutemetrics"
+        valueLocation: "value"
+        targetValue: "400"
+    - type: kedify-predictive
+      name: mmInTenMinutes
+      metadata:
+        modelName: mm-in-ten
+        targetValue: "400"
+---
+# Simple demo app that is subject of scaling (Deployment, Service & two ConfigMaps)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+            - name: nginx-index
+              mountPath: /usr/share/nginx/html/
+      volumes:
+        - name: nginx-index
+          configMap:
+            name: demo-index-html
+            defaultMode: 420
+        - name: nginx-config
+          configMap:
+            name: demo-config
+            defaultMode: 420
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      name: http
+      nodePort: 31112
+  selector:
+    app: demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-config
+  namespace: default
+data:
+  nginx.conf: |
+    server {
+      listen 8080;
+      root /usr/share/nginx/html/;
+
+      location /status {
+        stub_status on;
+        access_log  on;
+        allow all;
+      }
+
+      location / {
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-index-html
+  namespace: default
+data:
+  index.html: |
+    <html>
+      <body style="align-content: center; background: cadetblue; width: 20%; margin: auto;">
+        <h1 style="font-family: monospace; color: white; text-shadow: 2px 2px 6px #444444;">
+            Hello KEDA Prediction Controller!
+        </h1>
+        <br/><br/><br/>
+        <h2 style="font-family: monospace; color: white; text-shadow: 2px 2px 6px #444444;">
+        Model
+        </h2>
+        <img src="http://localhost:8000/models/mm-in-ten/graph"/>
+      </body>
+    </html>
+---
+# CR for kedify-predictor where we request the metric subscription on trigger called 'mm' belonging to SO 'mm'
+# so in other words it will create a Prophet model that will be retrained each day on the live incoming data
+# visualization of prediction will be eventually available at: http://kedify-predictor.keda.svc/models/mm-in-ten/graph
+# note: to speed up the initial phase, there is also oneShotCsv source where we take data from CSV and ingest the
+# metrics for the model (it would work also w/o it, but one would have to wait a day or two)
+apiVersion: keda.kedify.io/v1alpha1
+kind: MetricPredictor
+metadata:
+  name: mm-in-ten
+  namespace: default
+spec:
+  source:
+    keda:
+      name: mm
+      triggerName: mm
+    oneShotCsv:
+      url: https://storage.googleapis.com/kedify-predictor/website_traffic_4weeks_30s.csv
+      addTimestamps: true
+      timestampPeriod: 30s
+  model:
+    type: Prophet
+    name: mm-in-ten
+    defaultHorizon: 10m
+    retrainInterval: 1d

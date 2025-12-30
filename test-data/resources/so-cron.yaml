@@ -1,0 +1,25 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: kedify-sample-cron-so    
+spec:
+  scaleTargetRef:           
+    name: kedify-sample-cron              
+  pollingInterval:  10                                      
+  cooldownPeriod:   5                                                                        
+  minReplicaCount: 0                                       
+  maxReplicaCount: 10     
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 15                             
+  triggers:
+  - type: cron
+    metadata:
+      timezone: Europe/Prague
+      start: 0 13 * * *        # At 13:00
+      end: 20 13 * * *         # At 13:20
+      desiredReplicas: "5"
