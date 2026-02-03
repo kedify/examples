@@ -216,6 +216,7 @@ spec:
     failedJobsHistoryLimit: 2
     triggers:
     - type: kubernetes-resource
+      name: configmap
       metadata:
         resourceKind: ConfigMap
         resourceName: mock-metric
