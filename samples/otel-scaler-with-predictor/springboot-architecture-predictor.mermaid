@@ -1,0 +1,10 @@
+%% mermaid-ascii -f springboot-architecture-simple.mermaid -x 18 > springboot-architecture.ascii
+%% mmdc -i springboot-architecture-simple.mermaid -o springboot-architecture.svg
+
+graph LR
+classDef green color:#00ff00
+csv-file -->|initialIngest| predictor:::green
+KEDA -->|keda-raw-metrics| predictor:::green
+
+OTel-Scaler -->|measured| SO
+predictor:::green -->|predicted| SO

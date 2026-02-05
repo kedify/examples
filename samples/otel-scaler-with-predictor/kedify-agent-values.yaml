@@ -1,0 +1,11 @@
+keda:
+  enabled: true
+  env:
+    - name: RAW_METRICS_GRPC_PROTOCOL
+      value: enabled
+    - name: RAW_METRICS_MODE
+      value: pollinginterval
+keda-add-ons-http:
+  enabled: true
+kedify-predictor:
+  enabled: true
