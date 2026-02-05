@@ -1,0 +1,112 @@
+settings:
+  metricStore:
+    retentionSeconds: 30
+  logs:
+    logLvl: debug
+    keda:
+      enabled: true
+
+otelOperator:
+  enabled: true
+
+otelOperatorCrs:
+  - enabled: true
+    name: "router"
+    mode: deployment
+    namespace: observability
+    resources:
+      limits:
+        cpu: 400m
+        memory: 600Mi
+      requests:
+        cpu: 200m
+        memory: 400Mi
+
+    serviceAccount:
+      create: true
+      name: router
+    clusterRole: # required by prometheus receiver (dynamic targets based on pod annotation)
+      create: true
+      rules:
+       - apiGroups:
+         - ''
+         resources:
+         - 'pods'
+         verbs:
+         - 'get'
+         - 'list'
+         - 'watch'
+
+    alternateOtelConfig:
+      receivers:
+        prometheus/pull:
+          config:
+            scrape_configs:
+            - job_name: keda-scaler
+              scrape_interval: 5s
+              kubernetes_sd_configs:
+                - role: pod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_kedify_io_scrape]
+                  regex: "true"
+                  action: keep
+                - source_labels: [__meta_kubernetes_pod_annotation_kedify_io_path]
+                  action: replace
+                  target_label: __metrics_path__
+                  regex: (.+)
+                - source_labels: [__address__, __meta_kubernetes_pod_annotation_kedify_io_port]
+                  action: replace
+                  target_label: __address__
+                  regex: (.+)(?::\d+);(\d+)
+                  replacement: $1:$2
+                - source_labels: [__meta_kubernetes_pod_annotation_kedify_io_scheme]
+                  action: replace
+                  target_label: __scheme__
+                  regex: (.+)
+                # all the 'implicit' labels starting with __ will be dropped, so we need to preserve the pod identity
+                - source_labels: [__meta_kubernetes_pod_name]
+                  action: replace
+                  target_label: pod_name
+      exporters:
+        prometheusremotewrite:
+          endpoint: "http://prometheus-server.observability.svc/api/v1/write"
+          external_labels:
+            keda_is: great
+          tls:
+            insecure: true
+        otlp/keda:
+          endpoint: keda-otel-scaler.keda.svc:4317
+          tls:
+            insecure: true
+        debug:
+          verbosity: detailed
+
+      processors:
+        memory_limiter:
+          limit_mib: 550
+          check_interval: 5s
+        filter:
+          metrics:
+            include:
+              match_type: strict
+              metric_names:
+                - "http_server_requests_seconds"
+
+      extensions:
+        zpages:
+          endpoint: 0.0.0.0:55679
+
+      service:
+        pipelines:
+          metrics/keda:
+            receivers: [prometheus/pull]
+            processors: [memory_limiter, filter]
+            exporters: [otlp/keda, debug]
+          metrics/all:
+            receivers: [prometheus/pull]
+            processors: [memory_limiter]
+            exporters: [prometheusremotewrite]
+        extensions: [zpages]
+        telemetry:
+          logs:
+            level: DEBUG

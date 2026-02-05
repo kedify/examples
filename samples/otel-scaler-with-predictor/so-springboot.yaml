@@ -1,0 +1,36 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: spring-server
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: spring-server
+  triggers:
+    # this trigger works on real OpenTelemetry metrics that are being measured live
+    - type: kedify-otel
+      name: measured
+      metadata:
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        metricQuery: "sum(http_server_requests_seconds_count{method=GET,outcome=SUCCESS,status=200,uri=/ping})"
+        targetValue: "400"
+    # this trigger works on data predicted by a model that is being fed with real OTel metrics, but predicts the value 10 minutes into the future
+    - type: kedify-predictive
+      name: predicted
+      metadata:
+        modelName: app-in-ten
+        targetValue: "400"
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  advanced:
+    scalingModifiers:
+      # 70% weight on the measured value, 30% weight on the predicted value
+      formula: "(0.7 * measured) + (0.3 * predicted)"
+      target: "400"
+      metricType: "AverageValue"
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+        scaleUp:
+          stabilizationWindowSeconds: 1

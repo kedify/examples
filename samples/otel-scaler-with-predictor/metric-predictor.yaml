@@ -1,0 +1,21 @@
+kind: MetricPredictor
+apiVersion: keda.kedify.io/v1alpha1
+metadata:
+  name: app-in-ten
+  namespace: default
+spec:
+  source:
+    keda:
+      name: spring-server
+      triggerName: measured
+    oneShotCsv:
+      # this data should capture the normal behavior of the application, so that the model can learn it and have something to predict from at the beginning
+      # later on, the model will be continuously retrained with real OTel metrics
+      url: https://storage.googleapis.com/kedify-predictor/website_traffic_4weeks_30s.csv
+      addTimestamps: true
+      timestampPeriod: 30s
+  model:
+    type: Prophet
+    name: app-in-ten
+    defaultHorizon: 10m
+    retrainInterval: 1d
