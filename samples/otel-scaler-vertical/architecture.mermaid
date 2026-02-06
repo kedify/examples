@@ -1,0 +1,16 @@
+%% mermaid-ascii -f architecture.mermaid -x 18 > architecture.ascii
+%% mmdc -i architecture -o architecture.svg
+
+graph LR
+classDef red color:#ff0000
+classDef pink color:#ff00ff
+podinfo -->|Prom Receiver| router:::red
+router:::red -->|Remote-Write| Prometheus
+router:::red -->|OTLP/gRPC| KEDA-Scaler
+PRP:::pink -->|checksActivation| ScaledObject
+Prometheus -->|HTTP| Grafana
+KEDA-Scaler -->|gRPC| KEDA
+KEDA -->|reconciles| ScaledObject
+
+
+OTelOperator
