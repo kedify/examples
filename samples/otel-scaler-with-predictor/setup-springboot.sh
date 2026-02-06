@@ -19,8 +19,7 @@ helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm
 helm repo add kedify https://kedify.github.io/charts
 helm repo add prometheus https://prometheus-community.github.io/helm-charts
 helm repo add grafana https://grafana.github.io/helm-charts
-helm repo add jetstack https://charts.jetstack.io
-helm repo update open-telemetry kedify prometheus grafana jetstack
+helm repo update open-telemetry kedify prometheus grafana
 
 # setup cluster
 k3d cluster delete predictor-with-otel-scaler &> /dev/null
@@ -34,7 +33,7 @@ kubectl create ns keda
 # Deploy Kedify with KEDA, OTel Scaler & Predictor
 KEDIFY_AGENT_VERSION=$(curl -s https://api.github.com/repos/kedify/charts/releases | jq -r '[.[].tag_name | select(. | startswith("kedify-agent/")) | sub("^kedify-agent/"; "")] | first')
 KEDIFY_AGENT_VERSION=${KEDIFY_AGENT_VERSION:-v0.4.13}
-helm upgrade -i kedify-agent kedifykeda/kedify-agent --namespace keda --create-namespace --version ${KEDIFY_AGENT_VERSION} -f ${DIR}/kedify-agent-values.yaml \
+helm upgrade -i kedify-agent kedify/kedify-agent --namespace keda --create-namespace --version ${KEDIFY_AGENT_VERSION} -f ${DIR}/kedify-agent-values.yaml \
   --set agent.orgId=${KEDIFY_ORG_ID} \
   --set agent.apiKey=${KEDIFY_API_KEY} \
   --set clusterName=predictor-demo-$(xxd -l2 -ps /dev/urandom)
@@ -46,7 +45,7 @@ helm upgrade -i --create-namespace -n observability prometheus prometheus-commun
 helm upgrade -i --create-namespace -n observability grafana grafana/grafana -f ${DIR}/grafana-values.yaml
 
 # # KEDA Scaler & OTel collectors (when using own OTel operator, make sure otelOperator.enabled=false)
-helm upgrade -i keda-otel-scaler -nkeda oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.3 -f ${DIR}/otel-scaler-values.yaml
+helm upgrade -i kedify-otel-scaler -nkeda oci://ghcr.io/kedify/charts/otel-add-on --version=v0.1.3 -f ${DIR}/otel-scaler-values.yaml
 
 [ "x${SETUP_ONLY}" = "xtrue" ] && exit 0
 # wait for components
@@ -54,7 +53,7 @@ for d in \
   keda-operator \
   keda-operator-metrics-apiserver \
   otel-operator \
-  keda-otel-scaler \
+  kedify-otel-scaler \
   kedify-predictor ; do
     kubectl rollout status -n keda --timeout=600s deploy/${d}
   done

@@ -11,7 +11,7 @@ spec:
     - type: kedify-otel
       name: measured
       metadata:
-        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        scalerAddress: "kedify-otel-scaler.keda.svc:4318"
         metricQuery: "sum(http_server_requests_seconds_count{method=GET,outcome=SUCCESS,status=200,uri=/ping})"
         targetValue: "400"
     # this trigger works on data predicted by a model that is being fed with real OTel metrics, but predicts the value 10 minutes into the future

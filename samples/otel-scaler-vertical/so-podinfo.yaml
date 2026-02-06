@@ -1,0 +1,23 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: podinfo
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: podinfo
+  triggers:
+    - type: kedify-otel
+      metadata:
+        scalerAddress: "kedify-otel-scaler.keda.svc:4318"
+        metricQuery: "go_goroutines"
+        targetValue: "40"
+  minReplicaCount: 1
+  maxReplicaCount: 1
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 1
+        scaleUp:
+          stabilizationWindowSeconds: 1

@@ -50,19 +50,11 @@ otelOperatorCrs:
                 - source_labels: [__meta_kubernetes_pod_annotation_kedify_io_scrape]
                   regex: "true"
                   action: keep
-                - source_labels: [__meta_kubernetes_pod_annotation_kedify_io_path]
-                  action: replace
-                  target_label: __metrics_path__
-                  regex: (.+)
                 - source_labels: [__address__, __meta_kubernetes_pod_annotation_kedify_io_port]
                   action: replace
                   target_label: __address__
                   regex: (.+)(?::\d+);(\d+)
                   replacement: $1:$2
-                - source_labels: [__meta_kubernetes_pod_annotation_kedify_io_scheme]
-                  action: replace
-                  target_label: __scheme__
-                  regex: (.+)
                 # all the 'implicit' labels starting with __ will be dropped, so we need to preserve the pod identity
                 - source_labels: [__meta_kubernetes_pod_name]
                   action: replace
@@ -90,11 +82,7 @@ otelOperatorCrs:
             include:
               match_type: strict
               metric_names:
-                - "http_server_requests_seconds"
-
-      extensions:
-        zpages:
-          endpoint: 0.0.0.0:55679
+                - "go_goroutines"
 
       service:
         pipelines:
@@ -106,7 +94,6 @@ otelOperatorCrs:
             receivers: [prometheus/pull]
             processors: [memory_limiter]
             exporters: [prometheusremotewrite]
-        extensions: [zpages]
         telemetry:
           logs:
             level: DEBUG

@@ -1,0 +1,12 @@
+keda:
+  enabled: true
+keda-add-ons-http:
+  enabled: true
+  scaler:
+    replicas: 0
+  interceptor:
+    scaledObject:
+      cpuTrigger:
+        enabled: false
+      memoryTrigger:
+        enabled: false

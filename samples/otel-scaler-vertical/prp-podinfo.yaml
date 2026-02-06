@@ -1,0 +1,18 @@
+apiVersion: keda.kedify.io/v1alpha1
+kind: PodResourceProfile
+metadata:
+  name: podinfo
+  namespace: app
+spec:
+  containerName: podinfo
+  newResources:
+    requests:
+      memory: 50M
+  paused: false
+  priority: 0
+  target:
+    kind: scaledobject
+    name: podinfo
+  trigger:
+    after: activated
+    delay: 0s
