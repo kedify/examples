@@ -1,0 +1,61 @@
+apiVersion: keda.kedify.io/v1alpha1
+kind: PodResourceAutoscaler
+metadata:
+  name: load-generator
+  namespace: default
+spec:
+  target:
+    kind: deployment
+    name: load-generator
+  containerName: load-generator
+
+  policy:
+    pollInterval: 5s
+    consecutiveSamples: 2
+    cooldown: 30s
+    after: containerReady
+    delay: 5s
+
+    cpu:
+      requests:
+        scaleUpThreshold: 75
+        scaleDownThreshold: 45
+        targetUtilization: 60
+      limits:
+        scaleUpThreshold: 85
+        scaleDownThreshold: 60
+        targetUtilization: 70
+
+    memory:
+      requests:
+        scaleUpThreshold: 75
+        scaleDownThreshold: 50
+        targetUtilization: 60
+      limits:
+        scaleUpThreshold: 85
+        scaleDownThreshold: 60
+        targetUtilization: 70
+
+  bounds:
+    cpu:
+      requests:
+        min: 100m
+        max: "2"
+        step: 200m
+        stepPercent: 50
+      limits:
+        min: 300m
+        max: "3"
+        step: 300m
+        stepPercent: 50
+    memory:
+      requests:
+        min: 96Mi
+        max: 2Gi
+        step: 128Mi
+        stepPercent: 50
+      limits:
+        min: 600Mi
+        max: 3Gi
+        step: 256Mi
+        stepPercent: 50
