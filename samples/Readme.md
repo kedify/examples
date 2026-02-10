@@ -10,6 +10,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 | [http-add-on with istio](./http-add-on_with_istio) | Guide for autoscaling applications based on HTTP traffic with Istio service mesh and Istio gateway | Kedify HTTP |
 | [kafka](./kafka)                           | This application can be scaled by number of messages in the Kafka topic, including scale to zero  | Kafka |
 | [kyverno-automation](./kyverno-automation) | This example shows how to automate ScaledObject creation out of Deployment creation with Kyverno | - |
+| [load-generator](./load-generator)               | This application generates controllable CPU and memory load through REST profiles for vertical autoscaling tests | Kedify Vertical Scaling |
 | [minute-metrics](./minute-metrics)         | This application can be scaled by metrics coming from an REST endpoint that changes value every few minutes  | Metrics API |
 | [otel-scaler-pipelines](./otel-scaler-pipelines) | Complex OTel Scaler Setup with TLS and Router OTel collector | OTel |
 | [otel-scaler-with-predictor](./otel-scaler-with-predictor) | OTel Scaler Setup with Router OTel collector and Kedify Predictor | OTel, Predictor |
