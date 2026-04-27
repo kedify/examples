@@ -3,6 +3,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 
 | Directory                                  | Description                          | Used KEDA scalers                   |
 | ------------------------------------------ | ------------------------------------ | ----------------------------------- |
+| [argo-rollouts-canary](./argo-rollouts-canary) | Argo Rollouts canary deployments driven by `kedify-http`, with weighted traffic splitting handled by the Kedify Argo Rollouts traffic-router plugin | Kedify HTTP |
 | [azul-prp](./azul-prp)                     | This example demonstrates how to vertically scale a Java app running on Azul JVM | Kedify Vertical Scaling |
 | [envoy-http-scaler](./envoy-http-scaler)   | This example demonstrates how to use the already exisiting envoy to scale a deployment based on the request rate  | Kedify Envoy HTTP |
 | [grpc-responder](./grpc-responder)         | This application can be scaled by incoming gRPC traffic, including scale to zero  | Kedify HTTP |
