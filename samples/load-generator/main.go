@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -1051,7 +1052,13 @@ func (m *memoryController) SetTargetMiB(targetMiB int) {
 	m.chunks = m.chunks[:targetMiB]
 	m.mu.Unlock()
 
+	// FreeOSMemory forces MADV_DONTNEED on freed anon pages so RSS / cgroup
+	// working_set drops immediately. Without it Go's default MADV_FREE keeps
+	// the pages resident until kernel memory pressure shows up, which makes
+	// utilization-driven autoscalers see stale-high memory usage long after
+	// a shrink.
 	runtime.GC()
+	debug.FreeOSMemory()
 }
 
 // TargetMiB returns the configured memory target.
