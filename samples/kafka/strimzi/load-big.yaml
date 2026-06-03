@@ -33,6 +33,6 @@ spec:
           - name: TOPIC
             value: my-topic
           - name: MESSAGE_COUNT
-            value: "500"                    # increase this for a bigger load
+            value: "1000"                    # increase this for a bigger load
           - name: DELAY_MS
             value: "100"
