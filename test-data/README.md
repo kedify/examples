@@ -1,5 +1,25 @@
 # Testing resources for Kedify & KEDA
 
+## Install all test resources
+Copy and run this block to install all test resources:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/minutemetrics.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/target.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/so.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/sj.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/tas-ctas.yaml
+
+curl -s https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/create_resources.sh | \
+bash -s -- 2 5 4 test
+
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/prp-so.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/prp.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/pra.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/metric-predictor.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/scaling-policy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/scaling-group.yaml
+```
 
 ## Basic: Sample SO and SJ
 ```bash
@@ -16,10 +36,10 @@ kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-dat
 ```
 
 ## Bulk creation:
-Following command creates 5 namespaces (named test-1 - test-5), in each namespace 25 SOs and 20 SJs
+Following command creates 2 namespaces (named test-1 - test-2), in each namespace 5 SOs and 4 SJs
 ```bash
 curl -s https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/create_resources.sh | \
-bash -s -- 5 25 20 test
+bash -s -- 2 5 4 test
 ```
 >Usage: ./create_resources.sh <num_namespaces> <scaled_objects_per_ns> <scaled_jobs_per_ns> [namespace_prefix]
 
@@ -48,6 +68,20 @@ This demonstrates PodResourceProfile triggered by container lifecycle events:
 - **nginx2**: Adjusts to 30M memory after container becomes ready (30s delay)
 - Uses `containerReady` trigger type for lifecycle-based resource management
 
+## Pod Resource Autoscaler (PRA)
+Demonstrates dynamic vertical resource tuning with a load-generator workload:
+
+```bash
+# Deploy load-generator with Service and PodResourceAutoscaler
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/pra.yaml
+```
+
+This setup includes:
+- **Load Generator Deployment**: Runs `ghcr.io/kedify/sample-load-generator:latest` with baseline CPU and memory requests
+- **Service**: Exposes the load-generator HTTP API on port 8080
+- **PodResourceAutoscaler**: Tunes CPU and memory requests/limits based on observed utilization
+- **Resource Bounds**: Keeps CPU and memory adjustments within configured min/max ranges
+
 ## MetricPredictor (Predictive Autoscaling)
 Demonstrates KEDA predictive autoscaling using machine learning models to forecast workload patterns:
 
@@ -61,6 +95,20 @@ This setup includes:
 - **Demo Application**: Nginx-based target for scaling operations  
 - **ScaledObject with Predictive Triggers**: Combines live metrics with ML forecasts
 - **MetricPredictor**: Prophet-based time series model for 10-minute ahead predictions
+
+## ScalingPolicy (Scheduled Scaling Rules)
+Demonstrates Kedify ScalingPolicy functionality for scheduled adjustments on both ScaledObjects and ScaledJobs:
+
+```bash
+# Deploy sample ScaledObject, ScaledJob, and shared ScalingPolicy in the default namespace
+kubectl apply -f https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/scaling-policy.yaml
+```
+
+This setup includes:
+- **ConfigMap Metric Source**: Provides sample values for the Kubernetes Resource scaler
+- **ScaledObject**: Scales an nginx deployment from `scaling-policy-so`
+- **ScaledJob**: Runs short busybox jobs from `scaling-policy-sj`
+- **ScalingPolicy**: Applies business-hours, off-hours, and peak schedule adjustments to both targets
 
 ## ScalingGroup (Resource Capacity Management)
 Demonstrates KEDA ScalingGroup functionality for managing shared resource capacity across multiple ScaledObjects:

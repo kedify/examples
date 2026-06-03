@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scaling-policy-metrics
+  namespace: default
+data:
+  so-count: "8"
+  sj-count: "12"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scaling-policy-target
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scaling-policy-target
+  template:
+    metadata:
+      labels:
+        app: scaling-policy-target
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: scaling-policy-so
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: scaling-policy-target
+  pollingInterval: 30
+  cooldownPeriod: 5
+  minReplicaCount: 0
+  maxReplicaCount: 7
+  triggers:
+    - type: kubernetes-resource
+      metadata:
+        resourceKind: ConfigMap
+        resourceName: scaling-policy-metrics
+        key: so-count
+        format: number
+        valueType: int64
+        targetValue: "1"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: scaling-policy-sj
+  namespace: default
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        containers:
+          - name: busybox-worker
+            image: busybox
+            args:
+              - /bin/sh
+              - -c
+              - sleep 30
+        restartPolicy: Never
+  pollingInterval: 30
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  minReplicaCount: 0
+  maxReplicaCount: 7
+  triggers:
+    - type: kubernetes-resource
+      metadata:
+        resourceKind: ConfigMap
+        resourceName: scaling-policy-metrics
+        key: sj-count
+        format: number
+        valueType: int64
+        targetValue: "10"
+---
+apiVersion: keda.kedify.io/v1alpha1
+kind: ScalingPolicy
+metadata:
+  name: scalingpolicy-sample
+  namespace: default
+spec:
+  targets:
+    - apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      name: scaling-policy-so
+    - apiVersion: keda.sh/v1alpha1
+      kind: ScaledJob
+      name: scaling-policy-sj
+  actions:
+    - name: business-hours
+      priority: 1
+      trigger:
+        schedule:
+          start: "30 6 * * *"
+          end: "0 14 * * *"
+          timezone: "Europe/Prague"
+      adjustment:
+        pollingInterval: 10
+        minReplicaCount: 5
+        maxReplicaCount: 7
+    - name: off-hours
+      priority: 1
+      trigger:
+        schedule:
+          start: "0 18 * * *"
+          end: "0 6 * * *"
+          timezone: "Europe/Prague"
+      adjustment:
+        pollingInterval: 30
+        minReplicaCount: 0
+        maxReplicaCount: 2
+    - name: peak
+      priority: 2
+      trigger:
+        schedule:
+          start: "0 9 * * *"
+          end: "0 11 * * *"
+          timezone: "Europe/Prague"
+      adjustment:
+        pollingInterval: 5
+        minReplicaCount: 7
+        maxReplicaCount: 7
