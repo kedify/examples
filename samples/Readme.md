@@ -9,6 +9,7 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 | [grpc-responder](./grpc-responder)         | This application can be scaled by incoming gRPC traffic, including scale to zero  | Kedify HTTP |
 | [http-server](./http-server)               | This application can be scaled by incoming HTTP (or HTTPS) traffic, including scale to zero  | Kedify HTTP |
 | [http-add-on with istio](./http-add-on_with_istio) | Guide for autoscaling applications based on HTTP traffic with Istio service mesh and Istio gateway | Kedify HTTP |
+| [http-scaler with gloo](./http-scaler-with-gloo) | Guide for autoscaling applications based on HTTP traffic with Gloo Gateway and Kedify traffic autowiring | Kedify HTTP |
 | [kafka](./kafka)                           | This application can be scaled by number of messages in the Kafka topic, including scale to zero  | Kafka |
 | [kyverno-automation](./kyverno-automation) | This example shows how to automate ScaledObject creation out of Deployment creation with Kyverno | - |
 | [load-generator](./load-generator)               | This application generates controllable CPU and memory load through REST profiles for vertical autoscaling tests | Kedify Vertical Scaling |

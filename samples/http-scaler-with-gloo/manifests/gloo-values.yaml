@@ -1,0 +1,6 @@
+---
+gatewayProxies:
+  gatewayProxy:
+    disableCoreDumps: true
+    service:
+      type: LoadBalancer

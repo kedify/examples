@@ -1,0 +1,34 @@
+---
+apiVersion: gateway.solo.io/v1
+kind: VirtualService
+metadata:
+  name: http-server
+  namespace: default
+spec:
+  virtualHost:
+    domains:
+      - gloo-http.keda
+    routes:
+      - matchers:
+          - prefix: /
+        delegateAction:
+          ref:
+            name: http-server-routes
+            namespace: default
+---
+apiVersion: gateway.solo.io/v1
+kind: RouteTable
+metadata:
+  name: http-server-routes
+  namespace: default
+spec:
+  routes:
+    - matchers:
+        - prefix: /
+      routeAction:
+        single:
+          kube:
+            ref:
+              name: http-server
+              namespace: default
+            port: 8080
