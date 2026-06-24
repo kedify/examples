@@ -1,0 +1,254 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: http-server-waiting-page
+  namespace: default
+data:
+  coldStartWaitingPageStatusCode: "503"
+  coldStartWaitingPageRetryAfter: "3s"
+  coldStartWaitingPageBody: |-
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="refresh" content="3">
+        <title>Starting the application</title>
+        <style>
+          :root {
+            color-scheme: light dark;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #667085;
+            --accent: #14b8a6;
+            --accent-dark: #0f766e;
+            --ring: rgba(20, 184, 166, 0.22);
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 32px;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+              radial-gradient(circle at top left, rgba(20, 184, 166, 0.32), transparent 34rem),
+              linear-gradient(135deg, #0f172a 0%, #111827 48%, #0b1120 100%);
+            color: var(--text);
+          }
+
+          main {
+            width: min(100%, 520px);
+            padding: 40px;
+            border-radius: 8px;
+            background: var(--panel);
+            box-shadow: 0 24px 90px rgba(15, 23, 42, 0.34);
+            text-align: center;
+          }
+
+          .loader {
+            width: 68px;
+            height: 68px;
+            margin: 0 auto 28px;
+            border-radius: 50%;
+            border: 6px solid var(--ring);
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+          }
+
+          h1 {
+            margin: 0;
+            font-size: clamp(28px, 5vw, 42px);
+            line-height: 1.06;
+            letter-spacing: 0;
+          }
+
+          p {
+            margin: 18px 0 0;
+            color: var(--muted);
+            font-size: 17px;
+            line-height: 1.55;
+          }
+
+          .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 28px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(20, 184, 166, 0.1);
+            color: var(--accent-dark);
+            font-size: 14px;
+            font-weight: 650;
+          }
+
+          .pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.45);
+            animation: pulse 1.4s ease-out infinite;
+          }
+
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+
+          @keyframes pulse {
+            to {
+              box-shadow: 0 0 0 12px rgba(20, 184, 166, 0);
+            }
+          }
+
+          @media (prefers-color-scheme: dark) {
+            :root {
+              --panel: #111827;
+              --text: #f8fafc;
+              --muted: #cbd5e1;
+              --accent-dark: #5eead4;
+            }
+
+            main {
+              border: 1px solid rgba(148, 163, 184, 0.18);
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <main>
+          <div class="loader" aria-hidden="true"></div>
+          <h1>Starting the application</h1>
+          <p>The first request woke the service. This page refreshes automatically while Kedify brings a pod online.</p>
+          <div class="status">
+            <span class="pulse" aria-hidden="true"></span>
+            Retrying in a few seconds
+          </div>
+        </main>
+      </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-server-waiting
+  namespace: default
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: http-server-waiting
+  template:
+    metadata:
+      labels:
+        app: http-server-waiting
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: http-server
+          image: ghcr.io/kedify/sample-http-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 1
+          env:
+            - name: STARTUP_DELAY
+              value: "10"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-server-waiting
+  namespace: default
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app: http-server-waiting
+  type: ClusterIP
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: http-server-waiting
+  namespace: default
+spec:
+  maxReplicaCount: 5
+  minReplicaCount: 0
+  idleReplicaCount: 0
+  cooldownPeriod: 5
+  pollingInterval: 1
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: http-server-waiting
+  triggers:
+    - metadata:
+        hosts: gloo-waiting.keda
+        pathPrefixes: /
+        port: "8080"
+        scalingMetric: requestRate
+        service: http-server-waiting
+        targetValue: "1"
+        trafficAutowire: gloo
+        window: "15s"
+        coldStartWaitingPageEnabled: "true"
+        coldStartWaitingPageConfigMapRef: http-server-waiting-page
+      metricType: AverageValue
+      type: kedify-http
+---
+apiVersion: gateway.solo.io/v1
+kind: VirtualService
+metadata:
+  name: http-server-waiting
+  namespace: default
+spec:
+  virtualHost:
+    domains:
+      - gloo-waiting.keda
+    routes:
+      - matchers:
+          - prefix: /
+        routeAction:
+          single:
+            kube:
+              ref:
+                name: http-server-waiting
+                namespace: default
+              port: 8080

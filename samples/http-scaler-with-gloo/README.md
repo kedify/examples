@@ -136,3 +136,51 @@ kubectl get deployment http-server
 
 When traffic stops, Kedify scales it back to zero after the configured cooldown
 period.
+
+## Demo a Custom Cold-Start Waiting Page
+
+The `waiting-page-demo.yaml` manifest creates a separate copy of the sample app
+so it can run next to the basic `http-server` example:
+
+- `Deployment/http-server-waiting`
+- `Service/http-server-waiting`
+- `ScaledObject/http-server-waiting`
+- `ConfigMap/http-server-waiting-page`
+- `VirtualService/http-server-waiting`
+
+The waiting-page demo is exposed on `gloo-waiting.keda`. It sets
+`STARTUP_DELAY=20` on the app container and uses a TCP readiness probe, so the
+pod stays unready until the HTTP server actually starts listening. During that
+cold start, Kedify serves the configured waiting page immediately and keeps the
+HTTP metrics needed to scale the deployment.
+
+```bash
+kubectl apply -f ./manifests/waiting-page-demo.yaml
+```
+
+From outside the cluster:
+
+```bash
+GLOO_GATEWAY=$(kubectl -n gloo-system get svc gateway-proxy \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}')
+curl -i -H "Host: gloo-waiting.keda" "http://$GLOO_GATEWAY/"
+```
+
+The first response should be the custom waiting page with
+`503 Service Unavailable` and a `Retry-After: 3s` header. Retry after the app
+finishes its startup delay and the same URL should return the normal sample
+application.
+
+To watch the cold start and later scale-to-zero:
+
+```bash
+kubectl get deployment http-server-waiting pods -w
+```
+
+If you change the route after the generated `HTTPScaledObject` already exists,
+touch that object so Kedify reconciles the Gloo route again:
+
+```bash
+kubectl annotate httpscaledobject http-server-waiting \
+  kedify.io/reconcile="$(date +%s)" --overwrite
+```
