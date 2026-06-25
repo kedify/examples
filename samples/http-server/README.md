@@ -9,6 +9,13 @@ This is a simple HTTP server in Go designed for Kubernetes deployments. It accep
   - **Fixed delay:** Set a single value (e.g., `"0.3"`) for a constant delay.
   - **Dynamic delay (range):** Set a range (e.g., `"1.5-3.7"`) to have the server randomly select a delay uniformly between the two values.
 
+- **Configurable Startup Delay**  
+  Set the `STARTUP_DELAY` environment variable to delay server startup before
+  the HTTP listener is created. The value is specified in seconds, for example
+  `"20"` or `"12.5"`. This is useful for demonstrating cold starts and HTTP
+  scaler waiting pages. In Kubernetes, pair it with a readiness probe so the pod
+  is not marked Ready before the listener starts.
+
 - **Endpoints**  
   The server exposes multiple endpoints:
   - `/`  
@@ -63,7 +70,29 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
    ```
    This example introduces a random delay between 0.5 and 10 seconds.
 
-4. **Test the HTTP Server**:
+4. **Configure Startup Delay (Optional)**:
+
+   The application can also delay startup before it starts listening using the
+   `STARTUP_DELAY` environment variable:
+
+   ```yaml
+   - name: STARTUP_DELAY
+     value: "10"
+   ```
+
+   For Kubernetes demos, add a readiness probe so Services and ingress
+   controllers do not route to the pod until the listener is available:
+
+   ```yaml
+   readinessProbe:
+     tcpSocket:
+       port: http
+     periodSeconds: 1
+     timeoutSeconds: 1
+     failureThreshold: 1
+   ```
+
+5. **Test the HTTP Server**:
 
    You can test the server by specifying the host header and IP address and running `curl` command:
 
@@ -71,19 +100,19 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
    curl -H 'host: demo.keda' http://localhost:9080
    ```
 
-5. **Enable Autoscaling**:
+6. **Enable Autoscaling**:
 
    ```bash
    kubectl apply -f ./config/so.yaml
    ```
 
-6. **Test Higher Load (to trigger autoscaling)**:
+7. **Test Higher Load (to trigger autoscaling)**:
 
    ```bash
    hey -n 100000 -c 100 -host "demo.keda" http://localhost:9080
    ```
 
-7. **Setup OTel Tracing** (optional):
+8. **Setup OTel Tracing** (optional):
 
    If you want to enable OpenTelemetry tracing, you can set the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable in your deployment manifest. This should point to your OpenTelemetry collector endpoint.
 
@@ -94,7 +123,7 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
 
    Make sure you have an OpenTelemetry collector running in your cluster to receive the traces. Only the `/` root endpoint has tracing telemetry implemented.
 
-8. **Simulating Errors**:
+9. **Simulating Errors**:
 
    You can simulate errors by setting the `ERROR_RATE` and `ERROR_RESP_CODE` environment variables. This will cause the server to randomly return HTTP 503 errors (or code specified by `ERROR_RESP_CODE`) based on the error rate.
 

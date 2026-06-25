@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
 	"testing"
 	"time"
 )
 
 func TestParseDelayFixed(t *testing.T) {
-	os.Setenv("RESPONSE_DELAY", "2")
+	t.Setenv("RESPONSE_DELAY", "2")
+	t.Setenv("STARTUP_DELAY", "")
 	cfg, err := parseDelay()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -21,7 +21,8 @@ func TestParseDelayFixed(t *testing.T) {
 }
 
 func TestParseDelayRange(t *testing.T) {
-	os.Setenv("RESPONSE_DELAY", "1-3")
+	t.Setenv("RESPONSE_DELAY", "1-3")
+	t.Setenv("STARTUP_DELAY", "")
 	cfg, err := parseDelay()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -38,7 +39,8 @@ func TestParseDelayRange(t *testing.T) {
 }
 
 func TestParseDelayInvalid(t *testing.T) {
-	os.Setenv("RESPONSE_DELAY", "abc")
+	t.Setenv("RESPONSE_DELAY", "abc")
+	t.Setenv("STARTUP_DELAY", "")
 	_, err := parseDelay()
 	if err == nil {
 		t.Errorf("expected error for invalid delay value, got nil")
@@ -46,7 +48,8 @@ func TestParseDelayInvalid(t *testing.T) {
 }
 
 func TestParseDelayInvalidRange(t *testing.T) {
-	os.Setenv("RESPONSE_DELAY", "3-1")
+	t.Setenv("RESPONSE_DELAY", "3-1")
+	t.Setenv("STARTUP_DELAY", "")
 	_, err := parseDelay()
 	if err == nil {
 		t.Errorf("expected error for invalid delay range, got nil")
@@ -54,7 +57,8 @@ func TestParseDelayInvalidRange(t *testing.T) {
 }
 
 func TestParseDelayFloatFixed(t *testing.T) {
-	os.Setenv("RESPONSE_DELAY", "2.5")
+	t.Setenv("RESPONSE_DELAY", "2.5")
+	t.Setenv("STARTUP_DELAY", "")
 	cfg, err := parseDelay()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -69,7 +73,8 @@ func TestParseDelayFloatFixed(t *testing.T) {
 }
 
 func TestParseDelayFloatRange(t *testing.T) {
-	os.Setenv("RESPONSE_DELAY", "1.5-3.7")
+	t.Setenv("RESPONSE_DELAY", "1.5-3.7")
+	t.Setenv("STARTUP_DELAY", "")
 	cfg, err := parseDelay()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -82,5 +87,30 @@ func TestParseDelayFloatRange(t *testing.T) {
 	}
 	if cfg.MaxDelay != 3.7 {
 		t.Errorf("expected MaxDelay 3.7, got %v", cfg.MaxDelay)
+	}
+}
+
+func TestParseDelayStartupOnly(t *testing.T) {
+	t.Setenv("RESPONSE_DELAY", "")
+	t.Setenv("STARTUP_DELAY", "12.5")
+	cfg, err := parseDelay()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	expected := time.Duration(12.5 * float64(time.Second))
+	if cfg.StartupDelay != expected {
+		t.Errorf("expected StartupDelay %v, got %v", expected, cfg.StartupDelay)
+	}
+	if cfg.FixedDelay != 0 {
+		t.Errorf("expected FixedDelay 0, got %v", cfg.FixedDelay)
+	}
+}
+
+func TestParseDelayInvalidStartupDelay(t *testing.T) {
+	t.Setenv("RESPONSE_DELAY", "")
+	t.Setenv("STARTUP_DELAY", "-1")
+	_, err := parseDelay()
+	if err == nil {
+		t.Errorf("expected error for invalid startup delay, got nil")
 	}
 }

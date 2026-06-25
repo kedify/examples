@@ -28,6 +28,7 @@ import (
 )
 
 type DelayConfig struct {
+	StartupDelay    time.Duration
 	TLSAcceptDelay  time.Duration
 	TLSReadDelay    time.Duration
 	TLSWriteDelay   time.Duration
@@ -286,6 +287,16 @@ func main() {
 		cfg.ErrorRespCode = code
 	}
 
+	if cfg.StartupDelay > 0 {
+		log.Printf("Delaying server startup by %.2f seconds before listening", cfg.StartupDelay.Seconds())
+		time.Sleep(cfg.StartupDelay)
+	}
+
+	// Reset the delay-timeout reference so TLS_DELAY_TIMEOUT is measured from
+	// when the server starts listening, not from process start. Otherwise a
+	// large STARTUP_DELAY could consume the entire TLS delay window.
+	startDelayTimeout = time.Now()
+
 	log.Printf("Server is running on %s with %s (TLS: %v)\n", addr, delayDesc, tlsEnabled)
 
 	if tlsEnabled {
@@ -444,40 +455,55 @@ func loadTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	}, nil
 }
 
-// parseDelay parses the RESPONSE_DELAY environment variable to set a fixed delay or a range of delays.
+// parseDelay parses delay-related environment variables.
+//
+// RESPONSE_DELAY sets a fixed per-request delay or a random delay range.
 // If the variable is not set, no delay is applied.
 // If the variable is set to a single value, that value is used as a fixed delay.
 // If the variable is set to a range (e.g., "1-5"), a random delay within that range is applied.
-// The delay is specified in seconds.
+// STARTUP_DELAY delays server startup before the listener is created.
+// Delay values are specified in seconds.
 func parseDelay() (DelayConfig, error) {
 	var c DelayConfig
 	delayStr := os.Getenv("RESPONSE_DELAY")
-	if delayStr == "" {
-		return c, nil
+	if delayStr != "" {
+		if strings.Contains(delayStr, "-") {
+			c.IsRange = true
+			parts := strings.Split(delayStr, "-")
+			if len(parts) != 2 {
+				return c, fmt.Errorf("invalid delay range format: %s", delayStr)
+			}
+			minVal, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+			maxVal, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			if err1 != nil || err2 != nil {
+				return c, fmt.Errorf("invalid delay range values: %s", delayStr)
+			}
+			if minVal > maxVal {
+				return c, fmt.Errorf("invalid delay range: min %v > max %v", minVal, maxVal)
+			}
+			c.MinDelay = minVal
+			c.MaxDelay = maxVal
+		} else {
+			d, err := strconv.ParseFloat(delayStr, 64)
+			if err != nil {
+				return c, fmt.Errorf("invalid delay value: %v", err)
+			}
+			c.FixedDelay = time.Duration(d * float64(time.Second))
+		}
 	}
-	if strings.Contains(delayStr, "-") {
-		c.IsRange = true
-		parts := strings.Split(delayStr, "-")
-		if len(parts) != 2 {
-			return c, fmt.Errorf("invalid delay range format: %s", delayStr)
-		}
-		minVal, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
-		maxVal, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
-		if err1 != nil || err2 != nil {
-			return c, fmt.Errorf("invalid delay range values: %s", delayStr)
-		}
-		if minVal > maxVal {
-			return c, fmt.Errorf("invalid delay range: min %v > max %v", minVal, maxVal)
-		}
-		c.MinDelay = minVal
-		c.MaxDelay = maxVal
-	} else {
-		d, err := strconv.ParseFloat(delayStr, 64)
+
+	startupDelayStr := os.Getenv("STARTUP_DELAY")
+	if startupDelayStr != "" {
+		startupDelay, err := strconv.ParseFloat(startupDelayStr, 64)
 		if err != nil {
-			return c, fmt.Errorf("invalid delay value: %v", err)
+			return c, fmt.Errorf("invalid STARTUP_DELAY value: %v", err)
 		}
-		c.FixedDelay = time.Duration(d * float64(time.Second))
+		if startupDelay < 0 {
+			return c, fmt.Errorf("invalid STARTUP_DELAY value: must be >= 0")
+		}
+		c.StartupDelay = time.Duration(startupDelay * float64(time.Second))
 	}
+
 	tlsAcceptDelayStr := os.Getenv("TLS_ACCEPT_DELAY")
 	if tlsAcceptDelayStr != "" {
 		tlsDelay, err := strconv.ParseFloat(tlsAcceptDelayStr, 64)
