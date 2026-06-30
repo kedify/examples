@@ -1,0 +1,29 @@
+extraVolumes:
+  - name: supergraph
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: supergraph
+    mountPath: /supergraph
+
+initContainers:
+  - name: init-graph
+    image: busybox:1.36.1
+    command:
+      - sh
+      - -c
+      - wget https://supergraph.demo.starstuff.dev/ -O /supergraph/starstuff.graphql
+    volumeMounts:
+      - name: supergraph
+        mountPath: /supergraph
+
+router:
+  args:
+    - --dev
+    - --supergraph=/supergraph/starstuff.graphql
+
+# to test:
+# kubectl -n app port-forward svc/my-app-be-router 4000:80
+# curl -s http://localhost:4000/ \
+#   -H 'content-type: application/json' \
+#   --data-binary '{"query":"query { __schema { queryType { fields { name } } } }"}' | jq
