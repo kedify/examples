@@ -1,0 +1,170 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graphql-fe-app
+  namespace: app
+data:
+  server.js: |
+    const http = require("http");
+
+    const PORT = process.env.PORT || 8080;
+    const BACKEND_URL = process.env.BACKEND_URL || "http://msol-app-bff-main-router/";
+
+    const graphqlQuery = `
+      query {
+        __schema {
+          queryType {
+            fields {
+              name
+            }
+          }
+        }
+      }
+    `;
+
+    async function queryBackend() {
+      const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          query: graphqlQuery,
+        }),
+      });
+
+      const text = await response.text();
+
+      return {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: text,
+      };
+    }
+
+    const server = http.createServer(async (req, res) => {
+      if (req.url === "/healthz") {
+        res.writeHead(200, { "content-type": "text/plain" });
+        res.end("ok\n");
+        return;
+      }
+
+      const startedAt = new Date().toISOString();
+
+      try {
+        const backendResult = await queryBackend();
+
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          frontend: "graphql-fe-app",
+          requestPath: req.url,
+          timestamp: startedAt,
+          backendUrl: BACKEND_URL,
+          backendStatus: backendResult.status,
+          backendResponse: JSON.parse(backendResult.body),
+        }, null, 2));
+      } catch (err) {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          frontend: "graphql-fe-app",
+          requestPath: req.url,
+          timestamp: startedAt,
+          backendUrl: BACKEND_URL,
+          error: err.message,
+        }, null, 2));
+      }
+    });
+
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`FE listening on 0.0.0.0:${PORT}`);
+      console.log(`GraphQL backend URL: ${BACKEND_URL}`);
+    });
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: msol-app-fe-main
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: msol-app-fe-main
+  template:
+    metadata:
+      labels:
+        app: msol-app-fe-main
+    spec:
+      containers:
+        - name: fe
+          image: node:20-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - /app/server.js
+          env:
+            - name: PORT
+              value: "8080"
+            - name: BACKEND_URL
+              value: "http://msol-app-bff-main-router/"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: app
+          configMap:
+            name: graphql-fe-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: msol-app-fe-main
+  namespace: app
+spec:
+  type: ClusterIP
+  selector:
+    app: msol-app-fe-main
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: msol-app-fe-main
+  namespace: app
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: msol-app-fe-main.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: msol-app-fe-main
+                port:
+                  number: 80

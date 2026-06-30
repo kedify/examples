@@ -1,0 +1,47 @@
+settings:
+  metricStore:
+    retentionSeconds: 15
+  logs:
+    logLvl: debug
+
+otelCollector:
+  enabled: true
+  alternateConfig:
+    receivers:
+      # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/prometheusreceiver/README.md
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'otelcol'
+              scrape_interval: 5s
+              static_configs:
+                - targets: ['ingress-nginx-controller-metrics.ingress-nginx.svc:10254']
+    exporters:
+      otlp/keda:
+        endpoint: keda-otel-scaler.keda.svc:4317
+        compression: "none"
+        tls:
+          insecure: true
+      debug:
+        verbosity: detailed
+    processors:
+      filter/ottl:
+        error_mode: ignore
+        metrics:
+          metric:
+            - | # drop all other metrics
+              name != "nginx_ingress_controller_connect_duration_seconds"
+
+    service:
+      pipelines:
+        metrics:
+          receivers:
+            - prometheus
+          processors:
+            - filter/ottl
+          exporters:
+            - debug
+            - otlp/keda
+      telemetry:
+        logs:
+          level: DEBUG

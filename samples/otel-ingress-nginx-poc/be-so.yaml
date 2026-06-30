@@ -1,0 +1,22 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: msol-app-bff-main-so
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: msol-app-bff-main-router
+  triggers:
+    - type: kubernetes-workload
+      metadata:
+        podSelector: 'app=msol-app-fe-main'
+        value: "1"
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 120
+        scaleUp:
+          stabilizationWindowSeconds: 0

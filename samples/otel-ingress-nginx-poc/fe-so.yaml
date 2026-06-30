@@ -1,0 +1,24 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: msol-app-fe-main-so
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: msol-app-fe-main
+  triggers:
+    - type: kedify-otel
+      metadata:
+        scalerAddress: "keda-otel-scaler.keda.svc:4318"
+        metricQuery: "nginx_ingress_controller_connect_duration_seconds_count{service=msol-app-fe-main,namespace=app}"
+        operationOverTime: "rate"
+        targetValue: "1000"
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+        scaleUp:
+          stabilizationWindowSeconds: 0
