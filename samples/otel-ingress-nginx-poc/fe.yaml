@@ -13,7 +13,7 @@ data:
     const http = require("http");
 
     const PORT = process.env.PORT || 8080;
-    const BACKEND_URL = process.env.BACKEND_URL || "http://msol-app-bff-main-router/";
+    const BACKEND_URL = process.env.BACKEND_URL || "http://my-app-be-router/";
 
     const graphqlQuery = `
       query {
@@ -88,17 +88,17 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: msol-app-fe-main
+  name: my-app-fe
   namespace: app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: msol-app-fe-main
+      app: my-app-fe
   template:
     metadata:
       labels:
-        app: msol-app-fe-main
+        app: my-app-fe
     spec:
       containers:
         - name: fe
@@ -111,7 +111,7 @@ spec:
             - name: PORT
               value: "8080"
             - name: BACKEND_URL
-              value: "http://msol-app-bff-main-router/"
+              value: "http://my-app-be-router/"
           ports:
             - name: http
               containerPort: 8080
@@ -139,12 +139,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: msol-app-fe-main
+  name: my-app-fe
   namespace: app
 spec:
   type: ClusterIP
   selector:
-    app: msol-app-fe-main
+    app: my-app-fe
   ports:
     - name: http
       port: 80
@@ -153,18 +153,18 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: msol-app-fe-main
+  name: my-app-fe
   namespace: app
 spec:
   ingressClassName: nginx
   rules:
-    - host: msol-app-fe-main.local
+    - host: my-app-fe.local
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: msol-app-fe-main
+                name: my-app-fe
                 port:
                   number: 80
