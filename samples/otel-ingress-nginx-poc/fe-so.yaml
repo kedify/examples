@@ -10,7 +10,7 @@ spec:
     - type: kedify-otel
       metadata:
         scalerAddress: "keda-otel-scaler.keda.svc:4318"
-        metricQuery: "nginx_ingress_controller_connect_duration_seconds_count{service=my-app-fe,namespace=app}"
+        metricQuery: "sum(nginx_ingress_controller_connect_duration_seconds_count{service=my-app-fe,namespace=app})"
         operationOverTime: "rate"
         targetValue: "1000"
   minReplicaCount: 1

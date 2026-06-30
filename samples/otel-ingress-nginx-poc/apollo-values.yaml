@@ -8,7 +8,7 @@ extraVolumeMounts:
 
 initContainers:
   - name: init-graph
-    image: busybox:latest
+    image: busybox:1.36.1
     command:
       - sh
       - -c
@@ -23,7 +23,7 @@ router:
     - --supergraph=/supergraph/starstuff.graphql
 
 # to test:
-# kubectl -n apollo-router port-forward svc/apollo-be-router 4000:80
+# kubectl -n app port-forward svc/my-app-be-router 4000:80
 # curl -s http://localhost:4000/ \
 #   -H 'content-type: application/json' \
 #   --data-binary '{"query":"query { __schema { queryType { fields { name } } } }"}' | jq
