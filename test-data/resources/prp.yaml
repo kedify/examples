@@ -18,7 +18,7 @@ spec:
         image: nginx
         resources:
           requests:
-            memory: 30M
+            memory: 50M
             cpu: 50m
           limits:
             memory: 500M
@@ -39,3 +39,4 @@ spec:
   newResources:
     requests:
       memory: 30M
+
