@@ -1,0 +1,29 @@
+apiVersion: agones.dev/v1
+kind: Fleet
+metadata:
+  name: game-fleet
+spec:
+  replicas: 2
+  template:
+    spec:
+      ports:
+        - name: default
+          containerPort: 7654
+      # NOTE: the label must go on the inner Pod template; labels on the
+      # GameServer template (spec.template.metadata) end up on GameServer
+      # objects, not on Pods, and the ScaleAdapter selector would match nothing
+      template:
+        metadata:
+          labels:
+            kedify.io/scale-target: game-fleet
+        spec:
+          containers:
+            - name: simple-game-server
+              image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.36
+              resources:
+                requests:
+                  memory: 32Mi
+                  cpu: 20m
+                limits:
+                  memory: 32Mi
+                  cpu: 20m

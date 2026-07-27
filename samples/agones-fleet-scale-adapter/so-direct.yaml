@@ -1,0 +1,21 @@
+# targets the Fleet directly, WITHOUT the ScaleAdapter, to demonstrate why the
+# adapter exists: the generated HPA rejects the Fleet's empty scale selector
+# with ScalingActive=False, reason InvalidSelector, before evaluating any metric
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: game-fleet-direct
+spec:
+  scaleTargetRef:
+    apiVersion: agones.dev/v1
+    kind: Fleet
+    name: game-fleet
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  triggers:
+    - type: kubernetes-resource
+      metadata:
+        resourceKind: ConfigMap
+        resourceName: game-demand
+        key: value
+        targetValue: "1"
