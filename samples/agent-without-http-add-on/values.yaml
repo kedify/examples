@@ -1,0 +1,9 @@
+agent:
+  # dummy identifiers, the agent runs in offline mode and never contacts the Kedify platform
+  agentId: 00000000-0000-4000-8000-000000000001
+  orgId: 00000000-0000-4000-8000-000000000001
+  apiKey: kfy_00000000000000000000000000000000
+  extraArgs:
+    offline: true
+keda:
+  enabled: true
