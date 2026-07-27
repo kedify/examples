@@ -1,0 +1,14 @@
+apiVersion: autoscaling.kedify.io/v1alpha1
+kind: ScaleAdapter
+metadata:
+  name: game-fleet
+spec:
+  targetRef:
+    apiVersion: agones.dev/v1
+    kind: Fleet
+    name: game-fleet
+  selector:
+    matchLabels:
+      kedify.io/scale-target: game-fleet
+  # spec.replicas is intentionally unset, the controller initializes it from
+  # the Fleet so that creating the adapter never changes the replica count
