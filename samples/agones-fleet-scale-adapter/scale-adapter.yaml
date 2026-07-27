@@ -7,7 +7,7 @@ spec:
     apiVersion: agones.dev/v1
     kind: Fleet
     name: game-fleet
-  podSelector:
+  selector:
     matchLabels:
       kedify.io/scale-target: game-fleet
   # spec.replicas is intentionally unset, the controller initializes it from

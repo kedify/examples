@@ -95,7 +95,7 @@ Exactly one component may own the Fleet's desired replicas. Try to fight the ada
 kubectl scale fleet game-fleet --replicas=9
 ```
 
-Within one sync interval (15s) the adapter overwrites the manual change back to the autoscaled value and leaves an audit trail:
+Within a few seconds the adapter overwrites the manual change back to the autoscaled value and leaves an audit trail:
 
 ```bash
 kubectl get events --field-selector reason=ExternalReplicaChange
