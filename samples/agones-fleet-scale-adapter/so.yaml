@@ -1,0 +1,27 @@
+# the demand ConfigMap drives the metric: replicas ~= value / targetValue
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: game-demand
+data:
+  value: "2"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: game-fleet
+spec:
+  scaleTargetRef:
+    apiVersion: autoscaling.kedify.io/v1alpha1
+    kind: ScaleAdapter
+    name: game-fleet
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  cooldownPeriod: 30
+  triggers:
+    - type: kubernetes-resource
+      metadata:
+        resourceKind: ConfigMap
+        resourceName: game-demand
+        key: value
+        targetValue: "1"
