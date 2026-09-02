@@ -29,7 +29,11 @@ Source code for examples used in blog posts hosted at [https://www.kedify.io/blo
 | [dapr-producer-consumer][1]            | This app shows how to use custom metrics coming from Dapr ecosystem to autoscale Dapr microservices (push model) | OTel |
 | [opentelemetry-demo][2]                | This app autoscales two backend microservices based on load happening on frontend component (push model) | OTel |
 | [podinfo-webapp][3]                    | This demonstrates howto use OTel collector to scrape metrics from a webapp and use them for scaling (pull model) | OTel |
+| [vllm][4]                              | Three examples that use metrics exposed from accelerator (GPU) to scale LLM models deployed via vLLM: DCGM metrics, sidecar pattern & scraping metrics from router | OTel |
+| [cloudwatch-metric-stream][5]          | This example scales an nginx Deployment from an AWS Network Load Balancer's `NewFlowCount` metric. CloudWatch serializes the metric as OpenTelemetry 1.0 and sends it via OTLP to the KEDA OTel scaler. | OTel |
 
 [1]: https://github.com/kedify/otel-add-on/tree/main/examples/dapr
 [2]: https://github.com/kedify/otel-add-on/tree/main/examples/metric-push
 [3]: https://github.com/kedify/otel-add-on/tree/main/examples/metric-pull
+[4]: https://github.com/kedify/otel-add-on/tree/main/examples/vllm
+[5]: https://github.com/kedify/otel-add-on/tree/main/examples/cloudwatch-metric-stream
