@@ -133,6 +133,8 @@ kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
 # Install Kedify with Helm. Set these values from the Kedify Dashboard first:
 # https://docs.kedify.io/installation/helm
+export KEDIFY_ORG_ID="..."   # from Kedify Dashboard
+export KEDIFY_API_KEY="..."  # from Kedify Dashboard
 helm repo add kedifykeda https://kedify.github.io/charts --force-update
 helm repo update kedifykeda
 helm upgrade --install kedify-agent kedifykeda/kedify-agent \
