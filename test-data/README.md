@@ -131,8 +131,15 @@ This setup includes:
 k3d cluster delete ; k3d cluster create --servers 7 --no-lb --k3s-arg "--disable=traefik,servicelb,local-storage@server:*"
 kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
-# install kedify
-kubectl kedify i --email foo@bar -y
+# Install Kedify with Helm. Set these values from the Kedify Dashboard first:
+# https://docs.kedify.io/installation/helm
+helm repo add kedifykeda https://kedify.github.io/charts --force-update
+helm repo update kedifykeda
+helm upgrade --install kedify-agent kedifykeda/kedify-agent \
+  --namespace keda \
+  --create-namespace \
+  --set agent.orgId="$KEDIFY_ORG_ID" \
+  --set agent.apiKey="$KEDIFY_API_KEY"
 
 # 30 pods in total
 curl -s https://raw.githubusercontent.com/kedify/examples/main/test-data/resources/create_resources.sh | \
