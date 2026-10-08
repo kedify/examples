@@ -30,7 +30,8 @@ spec:
       scalingMetric: requestRate
       targetValue: "1"
       headers: |
-        [{"name": "User-Agent", "valueWildcard": "Python*"}]
+        - name: User-Agent
+          valueWildcard: 'Python*'
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -62,7 +63,7 @@ spec:
       scalingMetric: requestRate
       targetValue: "1"
       headers: |
-        [
-          {"name": "User-Agent", "valueRegex": "Go/[0-9]+(\\.[0-9]+)*"},
-          {"name": "X-Environment", "value": "Prod"}
-        ]
+        - name: User-Agent
+          valueRegex: 'Go/[0-9]+(\.[0-9]+)*'
+        - name: X-Environment
+          value: Prod
