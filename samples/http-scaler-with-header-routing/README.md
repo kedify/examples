@@ -99,24 +99,25 @@ The `foo` route uses a wildcard value:
 
 ```yaml
 headers: |
-  [{"name": "User-Agent", "valueWildcard": "Python*"}]
+  - name: User-Agent
+    valueWildcard: 'Python*'
 ```
 
 The `bar` route combines a regular expression with an exact value. Both headers must match:
 
 ```yaml
 headers: |
-  [
-    {"name": "User-Agent", "valueRegex": "Go/[0-9]+(\\.[0-9]+)*"},
-    {"name": "X-Environment", "value": "Prod"}
-  ]
+  - name: User-Agent
+    valueRegex: 'Go/[0-9]+(\.[0-9]+)*'
+  - name: X-Environment
+    value: Prod
 ```
 
 Header names are fixed and case-insensitive. Each entry must specify exactly one of `value`, `valueWildcard`, or `valueRegex`:
 
 - `value` matches literally and is case-sensitive, so `Prod` and `prod` differ.
 - `valueWildcard` matches the whole value case-insensitively. `*` matches zero or more characters, and `?` matches exactly one character. Other characters are literal: `rel.v?-*stable` matches `REL.V2-ALPHA.STABLE` but not `relxv2-alpha.stable`. A value of `*` requires the header to be present and also matches an empty value.
-- `valueRegex` uses RE2 syntax and matches the whole value case-insensitively. The expression above matches `Go/1`, `Go/1.22.0`, and `gO/1.22.0`, but not `Go/1.22.0-extra`. JSON needs `\\` to represent one backslash, so `\\.` in the metadata becomes `\.` in the regex and matches a literal dot.
+- `valueRegex` uses RE2 syntax and matches the whole value case-insensitively. The expression above matches `Go/1`, `Go/1.22.0`, and `gO/1.22.0`, but not `Go/1.22.0-extra`. Single-quoted YAML preserves backslashes, so `\.` matches a literal dot without extra escaping.
 
 All entries in `headers` must match. A request that matches neither selected route goes to `http-server`.
 
