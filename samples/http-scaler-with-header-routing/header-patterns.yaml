@@ -1,0 +1,68 @@
+# Apply after manifests.yaml to replace the foo and bar header selectors.
+# The http-server ScaledObject remains the headerless fallback.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: foo
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: foo
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 5
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+  - type: kedify-http
+    metricType: AverageValue
+    metadata:
+      hosts: demo.keda
+      pathPrefixes: /
+      service: foo
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1"
+      headers: |
+        [{"name": "User-Agent", "valueWildcard": "Python*"}]
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: bar
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bar
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 5
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 5
+  triggers:
+  - type: kedify-http
+    metricType: AverageValue
+    metadata:
+      hosts: demo.keda
+      pathPrefixes: /
+      service: bar
+      port: "8080"
+      scalingMetric: requestRate
+      targetValue: "1"
+      headers: |
+        [
+          {"name": "User-Agent", "valueRegex": "Go/[0-9]+(\\.[0-9]+)*"},
+          {"name": "X-Environment", "value": "Prod"}
+        ]
