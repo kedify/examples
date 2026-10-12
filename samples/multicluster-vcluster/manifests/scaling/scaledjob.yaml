@@ -1,0 +1,59 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: redis-auth
+  namespace: __NAMESPACE__
+spec:
+  secretTargetRef:
+    - parameter: address
+      name: redis-auth
+      key: address
+    - parameter: password
+      name: redis-auth
+      key: password
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: worker
+  namespace: __NAMESPACE__
+spec:
+  pollingInterval: 5
+  maxReplicaCount: 3
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  jobTargetRef:
+    backoffLimit: 1
+    template:
+      spec:
+        restartPolicy: Never
+        containers:
+          - name: worker
+            image: redis:7.4-alpine
+            command:
+              - /bin/sh
+              - -c
+            args:
+              - redis-cli --no-auth-warning -h "${REDIS_HOST}" -p 6379 -a "${REDIS_PASSWORD}" RPOP "${QUEUE_NAME}"; sleep 20
+            env:
+              - name: REDIS_HOST
+                valueFrom:
+                  secretKeyRef:
+                    name: redis-auth
+                    key: host
+              - name: REDIS_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: redis-auth
+                    key: password
+              - name: QUEUE_NAME
+                value: __QUEUE__
+  triggers:
+    - type: redis
+      metadata:
+        listName: __QUEUE__
+        listLength: "1"
+        activationListLength: "0"
+      authenticationRef:
+        name: redis-auth
+        kind: TriggerAuthentication

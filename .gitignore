@@ -1,1 +1,4 @@
 .DS_Store
+.kube
+.env
+/samples/multicluster-vcluster/state/
