@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: __NAMESPACE__
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: registry.k8s.io/pause:3.10.1
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: redis-auth
+  namespace: __NAMESPACE__
+spec:
+  secretTargetRef:
+    - parameter: address
+      name: redis-auth
+      key: address
+    - parameter: password
+      name: redis-auth
+      key: password
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker
+  namespace: __NAMESPACE__
+  annotations:
+    autoscaling.kedify.io/sync-period-seconds: "5"
+spec:
+  scaleTargetRef:
+    name: worker
+  pollingInterval: 5
+  cooldownPeriod: 10
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  advanced:
+    horizontalPodAutoscalerConfig:
+      name: worker-autoscaler
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+        scaleDown:
+          stabilizationWindowSeconds: 0
+  triggers:
+    - type: redis
+      metadata:
+        listName: __QUEUE__
+        listLength: "3"
+        activationListLength: "0"
+      authenticationRef:
+        name: redis-auth
+        kind: TriggerAuthentication

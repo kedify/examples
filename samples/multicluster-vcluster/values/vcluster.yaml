@@ -1,0 +1,26 @@
+controlPlane:
+  distro:
+    k8s:
+      enabled: true
+      image:
+        tag: v1.34.3
+  statefulSet:
+    image:
+      repository: loft-sh/vcluster-oss
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+
+telemetry:
+  enabled: false
+
+integrations:
+  metricsServer:
+    enabled: true
+    nodes: false
+    pods: true
+
