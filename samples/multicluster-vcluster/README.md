@@ -78,6 +78,20 @@ You can add the main cluster kubeconfig to your current terminal
 export KUBECONFIG=.kube/main.yaml
 ```
 
+The ignored `state/` directory is also not included in a clone. After getting
+the kubeconfigs for an existing deployment, reconstruct its Redis endpoint and
+password from the Redis cluster:
+
+```bash
+make redis-state
+```
+
+This reads the existing `redis-auth` Secret and internal LoadBalancer Service,
+then writes `state/redis-password` and `state/redis-ip` with mode `0600`. It
+does not print the password. Only use this command from a trusted workstation;
+access to `.kube/redis.yaml` grants access to the credential stored in the
+cluster.
+
 For a brand-new environment, `make infra` creates the Azure resources and
 runs the same credential-download step automatically. Running
 `make credentials` before the Bicep deployment exists will fail because there
