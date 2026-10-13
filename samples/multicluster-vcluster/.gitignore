@@ -1,0 +1,8 @@
+# Workstation credentials and live demonstration state must stay local.
+.env
+.env.*
+!.env.example
+.kube/
+state/
+__pycache__/
+*.py[cod]

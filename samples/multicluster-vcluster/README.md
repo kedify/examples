@@ -9,6 +9,8 @@ network and is exposed through an internal load balancer.
 
 ## Topology
 
+![Central Agent/KEDA/KPA scaling three independent vClusters with private Redis on Azure](assets/azure-vcluster-redis-topology.svg)
+
 ```text
 Azure resource group
 └── virtual network
@@ -27,13 +29,18 @@ Azure resource group
 
 - Azure CLI authenticated with `az login`
 - permission to create resource groups, role assignments, AKS, and network resources
-- Helm, kubectl, the vCluster CLI, Make, and OpenSSL
+- Helm, kubectl, the vCluster CLI, Make, OpenSSL, Python 3.9 or newer, and GNU `timeout`
+- iTerm2 and zsh for the native macOS presentation; `watch` for the extra Deployment tab
+- tmux only if using the optional tmux layout
 - sufficient regional quota for 32 general-purpose vCPUs
 
 Copy `.env.example` to `.env`, set `KEDIFY_ORG_ID` and `KEDIFY_API_KEY`, and
 adjust the Azure region, Kubernetes version, or released chart version if
 necessary. `KEDIFY_AGENT_ID` is optional; when omitted, Agent uses the
 management cluster's immutable identity.
+On macOS, Homebrew coreutils supplies GNU `timeout`; make sure its `libexec/gnubin`
+directory is on `PATH`. Keep `.env`, `.kube/`, and `state/` local; the sample's
+ignore rules also exclude environment-file backups and Python bytecode.
 
 ## Getting the kubeconfigs
 
@@ -145,6 +152,206 @@ the selected region and the bundled KPA release.
 
 ## Presentation flow
 
+### Manual presentation in iTerm2 on macOS
+
+The presentation uses three native iTerm2 views: observers, Deployment watches,
+and interactive resource shells. Commands work from zsh; the helpers use Bash.
+The observer view has a full-width host pane above three tenants. For visible
+manual commands, add a fifth full-width pane below them in iTerm2, or use the
+separate control tab created by the launcher.
+
+Before rehearsal, recover credentials/state if this is a fresh checkout, then
+restore the two-vCluster baseline:
+
+```bash
+make credentials
+make redis-state
+make demo-baseline
+```
+
+`demo-baseline` removes only the `demo-scaling` fixtures and the third vCluster,
+then prepares an idle CPU Deployment in vc-1 and an authenticated ScaledJob in
+vc-2. It does not recreate Azure infrastructure or the central controllers.
+`make demo-preflight` verifies this state without changing cluster resources.
+It waits for CPU samples whose measurement windows are usable by KPA, as well
+as `ScalingActive=True`, so the first CPU step starts from a sampled idle Pod.
+
+Create the observer/control workspace, then add the other two views:
+
+```bash
+make demo-iterm2
+make demo-iterm2-extras
+```
+
+Each launcher appends tabs. Run it once, then reuse the panes across reset cycles.
+
+Open one iTerm2 tab, enlarge its font before splitting, and create a full-width
+top pane plus three lower panes. Use at least 150 columns and 42 rows for the
+whole tab (180 × 46 is comfortable); resize the window and font together so the
+replica counts and headings remain visible:
+
+`make demo-iterm2` is an optional macOS launcher using iTerm2's documented
+[AppleScript interface](https://iterm2.com/documentation-scripting.html). It
+creates a new observer tab with the four panes and a separate manual-control
+tab, sizes those sessions for readability, and starts only the read-only
+observers and help. Existing tab commands and profile preferences are untouched.
+macOS may ask you to allow the invoking app to control iTerm2. Review
+`scripts/demo-iterm2.applescript` before running it. You can also create the
+layout manually:
+
+1. Split horizontally with **Cmd+Shift+D**. The top pane is the host view.
+2. Focus the lower pane and split vertically with **Cmd+D** twice to obtain
+   three tenant panes. Drag the dividers to give the tenants equal widths.
+3. In every pane, change into `examples/samples/multicluster-vcluster`.
+4. Run one command per pane:
+
+| Pane | Command |
+| --- | --- |
+| Top, full width | `make demo-pane PANE=host` |
+| Lower left | `make demo-pane PANE=1` |
+| Lower middle | `make demo-pane PANE=2` |
+| Lower right | `make demo-pane PANE=3` |
+
+Use iTerm2's session titles to label the panes if desired. The observer also
+prints its cluster identity inside every pane. The vc-3 pane waits until that
+member exists. Press **Ctrl+C in each pane** to stop observation and close its
+connection. Observation uses explicit contexts and never switches the default
+kubeconfig. It writes only sanitized, ignored summaries in `state/observer`.
+Stop an existing observer layout before launching another; the native and tmux
+layouts use the same per-member ports and should not run concurrently.
+Errors, stale samples, and a new registration UID invalidate counts rather than
+being displayed as zero. `DEMO_REFRESH_SECONDS=3` controls refresh frequency;
+`NO_COLOR=1` disables colors for accessible or plain-text output.
+Green highlights ready/converged values and successful Jobs; cyan highlights
+desired replicas and active work; amber highlights queued demand, transitions
+and unknown values; red highlights failures. Explanatory text is muted.
+
+In the control tab, run these steps separately, leaving time for discussion:
+
+You can instead type these commands in an extra lower pane in the observer
+tab, so the audience can see the command and its result together.
+
+```bash
+make demo-cpu-on       # vc-1: 1 -> 3 ready replicas
+make demo-cpu-off      # vc-1: back to its minimum of one
+make demo-jobs         # vc-2: enqueue three items; Jobs consume them
+make third-vcluster   # live discovery, CRD bootstrap, registration
+make demo-workload    # developer-owned ordinary ScaledObject in vc-3
+make demo-queue-on     # nine Redis items -> three vc-3 replicas
+make demo-queue-off    # remove simulated demand -> scale to zero
+```
+
+`make demo-help` displays the controls. No manual action automatically schedules
+the next one or clears demand on a timer. Job history remains visible, and the
+observer distinguishes active, succeeded, and failed Jobs. CPU commands toggle
+load inside an existing Pod without changing the Deployment template. Newly
+scaled Pods start idle; one 500m load source is enough to reach the maximum of
+three. Turning load off clears it in all running worker Pods. The command names
+remain the same. After initial setup or a baseline reset, preflight waits until
+CPU measurement windows are usable by KPA, rather than merely visible in `top`.
+The vc-1 observer replaces the two known startup metric failure reasons with
+“Collecting CPU metrics…” for at most 150 seconds. Actual conditions remain
+visible; persistent, permission and connectivity failures keep their KPA reason.
+The vc-3 placeholder Deployment does not consume Redis; clearing its list is an
+explicit simulation of demand disappearing. vc-2 demonstrates real consumption.
+
+The host pane combines host registration/component status with sanitized member
+observations. Dedicated mode keeps SO/SJ/KPA resources inside their members;
+they are not mirrored host resources. Registration readiness validates access,
+while KPA conditions and Deployment/Job observations demonstrate reconciliation.
+
+Useful repeat/reset controls, run from the manual command pane:
+
+| Command | Effect |
+| --- | --- |
+| `make demo-jobs-clear` | Clear vc-2 queued demand; Jobs that fetched work may finish |
+| `make demo-jobs-reset` | Clear vc-2 demand, remove its Jobs and recreate the ScaledJob fixture |
+| `make demo-queue-off` | Clear vc-3 backlog and wait for zero worker replicas |
+| `make demo-queue-clear` | Clear vc-3 backlog even if the tenant or worker is absent |
+| `make demo-tenant-reset` | Clear vc-3 backlog, uninstall vc-3 and wait for its generated registration to disappear |
+| `make demo-baseline` | Restore the two-tenant idle baseline, removing vc-3 and all demo Job history |
+
+After a Jobs reset, run `make demo-jobs` again. After a tenant reset, run
+`make third-vcluster`, then `make demo-workload`. Discovery owns the generated
+registration lifecycle. `make reset-third-vcluster` remains available as the
+underlying tenant removal command; `demo-tenant-reset` also clears Redis demand.
+
+### Extra Deployment and resource tabs
+
+Run `make demo-iterm2-extras` once to append two native tabs without changing
+your existing panes. It requires `watch` (`brew install watch` if missing).
+
+- **Deployments:** host above three tenants. Each pane runs `watch` every two
+  seconds around `kubectl get deployments --all-namespaces`. The host has the
+  central Agent/KEDA/KPA Deployments; tenant views show their local workloads
+  and replica changes. Host-synced tenant Deployments may also appear on the host.
+- **Resources:** a 2 × 2 layout: host upper left, vc-1 upper right, vc-2 lower
+  left, vc-3 lower right. Each pane opens a clean interactive zsh and lists its
+  ScaledObjects/ScaledJobs first. Type ordinary `kubectl` commands here; in tenant
+  panes a shell function connects afresh for every command, fetching current
+  credentials. The host uses `keda` and workloads use `demo-scaling`.
+
+The vc-3 panes wait for registration and connect automatically after
+`make third-vcluster`. Deployment watches use ports 18541–18543, separate from
+the observer ports, and monitor registration identity to reconnect after tenant
+recreation. Resource commands use temporary connections on random free ports.
+Stop the observer/watch panes before creating another copy. Use
+**Ctrl+C** to stop a Deployment watch; type `exit` to close a connected resource
+shell (or Ctrl+C while it is still waiting). User startup files and the default
+kubeconfig are unchanged; only the resource shell uses the supplied demo zshrc.
+For manual layout, run `make demo-deployments PANE=host`
+or `make demo-resources PANE=host`, using `PANE=1`, `2`, and `3` in tenant panes.
+
+Leave all tabs running during Jobs resets and `demo-baseline`. Resources may
+briefly disappear while namespaces/fixtures are recreated. Removing/recreating
+vc-3 makes its observer and Deployment watch wait and reconnect automatically;
+its existing resource shell remains usable, and the next `kubectl` command
+fetches the new credentials after registration is Ready. A command issued while
+vc-3 is absent fails visibly; retry when Ready. A manually started long-running
+`kubectl --watch` command may need Ctrl+C and a rerun after tenant recreation,
+but the resource shell and tab do not need to be recreated.
+
+Useful inspection commands:
+
+```bash
+# Host resource pane
+kubectl -n keda get clusterregistrations
+kubectl -n keda get deployments
+
+# Each tenant resource pane
+kubectl -n demo-scaling get scaledobject,scaledjob,kpa
+kubectl -n demo-scaling get deployments,jobs,pods
+```
+
+For Dashboard presentation, use **Components**, **Multi-Cluster**, then select
+**Include member clusters** separately on the ScaledObjects and ScaledJobs lists.
+Member resources are read-only. Open a resource to inspect its member identity
+and conditions. The three `worker` resources deliberately share a namespace and
+name so the cluster column matters.
+
+For the optional tmux layout, run `make demo-tmux` in a sufficiently large
+terminal. It opens the same host/three-tenant layout and a separate `control`
+window. Switch windows with **Ctrl+B, n** or **Ctrl+B, p**. Stop the whole session
+with `tmux kill-session -t kedify-vcluster-demo`; attaching to an existing session
+uses `tmux attach -t kedify-vcluster-demo`. Session options are local and do not
+modify the user's tmux configuration.
+
+Run `make demo-check` for offline regression checks of observer freshness,
+registration identity, Job Pod ownership, and replica waits. These checks do not
+access Azure. Shell syntax can also be checked with `bash -n scripts/demo-*.sh`;
+use `shellcheck -P scripts -x scripts/demo-*.sh scripts/scaling-common.sh` when
+ShellCheck is installed.
+
+The architecture asset is
+[`assets/azure-vcluster-redis-topology.svg`](assets/azure-vcluster-redis-topology.svg).
+Its source is `marketing/design/diagrams/vcluster-demo.mjs` in the sibling
+marketing repository. Follow `marketing/design/diagrams/README.md`, regenerate
+with `npm run diagrams:generate`, run `npm run diagrams:check`, and copy the
+generated `packages/docs/public/assets/images/docs/azure-vcluster-demo.svg`
+here. Do not hand-edit the exported SVG.
+
+### Existing automated presentation
+
 Before the presentation, prepare and verify the stable two-cluster baseline:
 
 ```bash
@@ -190,11 +397,17 @@ Redis lists so demand and autoscaling state cannot leak between vClusters:
 CPU-backed `ScaledObject` in `vc-1`. The vCluster proxies its host cluster's
 PodMetrics API, allowing central KPA to read CPU usage through the registered
 `vc-1` Kubernetes API. The worker initially sleeps and remains at one replica.
-During the presentation, the script enables a CPU-bound loop in the worker;
-each replica is limited to 500m CPU against a 100m request and the target is
-50% utilization, so KPA deterministically reaches the configured maximum of
-three replicas. Disabling the load rolls out sleeping workers and KPA returns
-the Deployment to its minimum of one replica.
+During the presentation, the script enables a file-controlled CPU-bound loop
+inside the existing worker Pods, without replacing them. Each Pod is limited to
+500m CPU against a 100m request and the target is 50% utilization. One busy Pod
+already demands more than the configured maximum of three replicas, even though
+newly scaled Pods start idle. Disabling the load removes the control file from
+all running worker Pods and KPA returns the Deployment to its minimum of one.
+Load state is recorded on Deployment metadata, outside its Pod template. Applying
+the updated fixture for the first time rolls out its new worker command once;
+subsequent on/off cycles do not roll the Deployment.
+The loaded Pod gets a higher deletion cost so scale-down prefers to keep the
+already sampled worker for the next cycle.
 
 This scenario shows steady-state reconciliation for a vCluster that was
 connected before the presentation:

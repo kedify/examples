@@ -27,10 +27,13 @@ redis_password() {
 }
 
 redis_cli() {
-  kubectl --kubeconfig "${REDIS_KUBECONFIG}" \
+  # Pass the password on stdin so process arguments and presentation commands
+  # never contain it. Disable tracing before reading credential state.
+  set +x
+  printf '%s\n' "$(redis_password)" | kubectl --kubeconfig "${REDIS_KUBECONFIG}" \
     --namespace redis \
-    exec deployment/redis -- \
-    env "REDISCLI_AUTH=$(redis_password)" redis-cli --no-auth-warning "$@"
+    exec -i deployment/redis -- \
+    sh -c 'IFS= read -r REDISCLI_AUTH; export REDISCLI_AUTH; exec redis-cli --no-auth-warning "$@"' sh "$@"
 }
 
 clear_demo_queues() {
@@ -128,15 +131,58 @@ deploy_remote_cpu_scaledobject() {
   vcluster_kubectl "${index}" create namespace "${DEMO_NAMESPACE}" --dry-run=client --output yaml | \
     vcluster_kubectl "${index}" apply -f -
   apply_remote_template "${index}" "${REPO_ROOT}/manifests/scaling/cpu-scaledobject.yaml" unused
+  vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" \
+    rollout status deployment/worker --timeout="${DEMO_WAIT_TIMEOUT_SECONDS:-300}s"
+  set_remote_cpu_load "${index}" false
+}
+
+wait_for_remote_cpu_metrics() {
+  local index="$1"
+  require_command python3
+  # One persistent connection while waiting, independent of the presentation panes.
+  KUBECONFIG="${MAIN_KUBECONFIG}" vcluster connect "$(vcluster_release_name "${index}")" \
+    --namespace "$(vcluster_namespace "${index}")" --background-proxy=false --silent \
+    -- python3 -B "${REPO_ROOT}/scripts/demo-observer.py" cpu-ready
 }
 
 set_remote_cpu_load() {
   local index="$1"
   local enabled="$2"
+  local control pods pod phase deleting count=0
+  [[ "${enabled}" == true || "${enabled}" == false ]] || { echo 'Expected CPU load true or false' >&2; return 1; }
+  control="$(vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" get deployment worker \
+    --output 'jsonpath={.metadata.annotations.demo\.kedify\.io/cpu-control}')"
+  [[ "${control}" == file-v1 ]] || { echo 'CPU fixture needs updating: run make prepare-scaling-demo before the presentation' >&2; return 1; }
+  if [[ "${enabled}" == true ]]; then
+    wait_for_remote_cpu_metrics "${index}"
+  fi
+  pods="$(vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" get pods --selector app=worker \
+    --output 'jsonpath={range .items[*]}{.metadata.name}{" "}{.status.phase}{" "}{.metadata.deletionTimestamp}{"\n"}{end}')"
+  # Only Deployment metadata changes. A partial/failed toggle stays unknown;
+  # it must never be presented as a successful on/off state.
   vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" \
-    set env deployment/worker "CPU_LOAD=${enabled}"
+    annotate deployment/worker demo.kedify.io/cpu-load=unknown --overwrite >/dev/null
+  while read -r pod phase deleting; do
+    [[ -n "${pod}" && "${phase}" == Running && -z "${deleting}" ]] || continue
+    if [[ "${enabled}" == true ]]; then
+      # Keep the warm load source when the ReplicaSet later returns to one Pod.
+      # New scale-out Pods start idle and retain the default deletion cost.
+      vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" annotate "pod/${pod}" \
+        controller.kubernetes.io/pod-deletion-cost=100 --overwrite >/dev/null
+    fi
+    # The quoted program runs in the worker container; $1 is its load argument.
+    # shellcheck disable=SC2016
+    vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" exec "${pod}" -- sh -c '
+      test -f /tmp/kedify-demo-cpu-control || exit 1
+      if [ "$1" = true ]; then touch /tmp/kedify-demo-cpu-load; else rm -f /tmp/kedify-demo-cpu-load; fi
+    ' sh "${enabled}" || return 1
+    count=$((count + 1))
+    [[ "${enabled}" == false ]] || break
+  done <<<"${pods}"
+  ((count > 0)) || { echo 'No running worker Pods found; CPU load state is unknown' >&2; return 1; }
   vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" \
-    rollout status deployment/worker --timeout="${DEMO_WAIT_TIMEOUT_SECONDS:-300}s"
+    annotate deployment/worker "demo.kedify.io/cpu-load=${enabled}" --overwrite >/dev/null
+  echo "vc-${index} CPU load ${enabled} in ${count} existing Pod(s); no Deployment rollout"
 }
 
 deploy_remote_scaledjob() {
@@ -174,7 +220,9 @@ wait_for_deployment_replicas() {
     current="$(vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" get deployment worker --output 'jsonpath={.spec.replicas}:{.status.readyReplicas}' 2>/dev/null || true)"
     desired="${current%%:*}"
     ready="${current#*:}"
-    if [[ "${desired:-0}" == "${expected}" ]] && { [[ "${expected}" == "0" ]] || [[ "${ready:-0}" == "${expected}" ]]; }; then
+    # A failed/empty API response is unknown, including while waiting for zero.
+    # Require an observed spec.replicas and wait for old ready Pods to disappear.
+    if [[ "${current}" == *:* && "${desired}" == "${expected}" && "${ready:-0}" == "${expected}" ]]; then
       echo "vc-${index} worker reached ${expected} desired and ready replicas"
       return 0
     fi

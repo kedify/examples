@@ -2,6 +2,7 @@
 
 source "$(dirname "$0")/common.sh"
 source "$(dirname "$0")/vcluster-common.sh"
+source "$(dirname "$0")/presentation-common.sh"
 
 require_command helm kubectl
 require_file "${MAIN_KUBECONFIG}"
@@ -21,10 +22,11 @@ if helm --kubeconfig "${MAIN_KUBECONFIG}" --namespace "$(vcluster_namespace 3)" 
 fi
 
 echo
-echo "Prepared state: two discovered vClusters are Ready"
+demo_heading 'Prepared state: two discovered vClusters are Ready'
 show_vcluster_registrations
 echo
-echo "Starting a live ClusterRegistration watch, then creating vc-3"
+demo_command 'make third-vcluster'
+demo_note 'Agent bootstraps CRDs and registration. Central KEDA/KPA keep running.'
 
 kubectl --kubeconfig "${MAIN_KUBECONFIG}" \
   --namespace "${NAMESPACE}" \
@@ -48,7 +50,7 @@ trap - EXIT
 
 registration_name="$(registration_name_for_cluster "${third_cluster_name}")"
 echo
-echo "Lifecycle complete: Agent discovered and bootstrapped vc-3, and its registration is Ready"
+demo_ok 'Lifecycle complete: Agent bootstrapped vc-3; registration is Ready'
 kubectl --kubeconfig "${MAIN_KUBECONFIG}" \
   --namespace "${NAMESPACE}" \
   get "clusterregistration.multicluster.kedify.io/${registration_name}" \
@@ -57,4 +59,4 @@ echo
 echo "All presentation clusters"
 show_vcluster_registrations
 echo
-echo "Next: deploy the remote scaling scenarios into vc-1, vc-2, and vc-3."
+demo_note 'Next: make demo-workload, then make demo-queue-on'
