@@ -72,6 +72,12 @@ kubectl --kubeconfig .kube/main.yaml get nodes
 kubectl --kubeconfig .kube/redis.yaml get nodes
 ```
 
+You can add the main cluster kubeconfig to your current terminal
+
+```
+export KUBECONFIG=.kube/main.yaml
+```
+
 For a brand-new environment, `make infra` creates the Azure resources and
 runs the same credential-download step automatically. Running
 `make credentials` before the Bicep deployment exists will fail because there
