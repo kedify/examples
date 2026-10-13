@@ -3,7 +3,6 @@
 # Shared helpers for the remote ScaledObject and ScaledJob presentation.
 
 export DEMO_NAMESPACE="${DEMO_NAMESPACE:-demo-scaling}"
-export VC1_QUEUE="${VC1_QUEUE:-demo-vc1-scaledobject}"
 export VC2_QUEUE="${VC2_QUEUE:-demo-vc2-scaledjob}"
 export VC3_QUEUE="${VC3_QUEUE:-demo-vc3-scaledobject}"
 
@@ -35,7 +34,7 @@ redis_cli() {
 }
 
 clear_demo_queues() {
-  redis_cli DEL "${VC1_QUEUE}" "${VC2_QUEUE}" "${VC3_QUEUE}" >/dev/null
+  redis_cli DEL "${VC2_QUEUE}" "${VC3_QUEUE}" >/dev/null
 }
 
 push_queue_items() {
@@ -63,6 +62,21 @@ verify_main_to_redis_connectivity() {
     --attach \
     --env="REDISCLI_AUTH=$(redis_password)" \
     --command -- redis-cli --no-auth-warning -h "$(redis_host)" -p 6379 PING
+}
+
+wait_for_remote_metrics_api() {
+  local index="$1"
+  local deadline=$((SECONDS + ${DEMO_WAIT_TIMEOUT_SECONDS:-300}))
+  while ((SECONDS < deadline)); do
+    if vcluster_kubectl "${index}" get --raw /apis/metrics.k8s.io/v1beta1 >/dev/null 2>&1; then
+      echo "vc-${index} metrics.k8s.io API is available"
+      return 0
+    fi
+    sleep 3
+  done
+  echo "timed out waiting for metrics.k8s.io in vc-${index}" >&2
+  echo "run 'make vclusters' to apply the metrics-server integration" >&2
+  return 1
 }
 
 apply_remote_auth_secret() {
@@ -107,6 +121,22 @@ deploy_remote_scaledobject() {
     vcluster_kubectl "${index}" apply -f -
   apply_remote_auth_secret "${index}"
   apply_remote_template "${index}" "${REPO_ROOT}/manifests/scaling/scaledobject.yaml" "${queue}"
+}
+
+deploy_remote_cpu_scaledobject() {
+  local index="$1"
+  vcluster_kubectl "${index}" create namespace "${DEMO_NAMESPACE}" --dry-run=client --output yaml | \
+    vcluster_kubectl "${index}" apply -f -
+  apply_remote_template "${index}" "${REPO_ROOT}/manifests/scaling/cpu-scaledobject.yaml" unused
+}
+
+set_remote_cpu_load() {
+  local index="$1"
+  local enabled="$2"
+  vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" \
+    set env deployment/worker "CPU_LOAD=${enabled}"
+  vcluster_kubectl "${index}" --namespace "${DEMO_NAMESPACE}" \
+    rollout status deployment/worker --timeout="${DEMO_WAIT_TIMEOUT_SECONDS:-300}s"
 }
 
 deploy_remote_scaledjob() {

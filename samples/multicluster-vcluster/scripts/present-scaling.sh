@@ -21,12 +21,12 @@ show_remote_scaledobject 3
 
 clear_demo_queues
 echo
-echo "Adding Redis load for all three remote clusters"
-echo "vc-1 queue length: $(push_queue_items "${VC1_QUEUE}" 6)"
+echo "Enabling CPU load in vc-1 and adding Redis load for vc-2 and vc-3"
+set_remote_cpu_load 1 true
 echo "vc-2 queue length: $(push_queue_items "${VC2_QUEUE}" 3)"
 echo "vc-3 queue length: $(push_queue_items "${VC3_QUEUE}" 9)"
 
-wait_for_deployment_replicas 1 2
+wait_for_deployment_replicas 1 3
 wait_for_scaledjob_jobs 2
 wait_for_deployment_replicas 3 3
 
@@ -41,12 +41,13 @@ echo
 echo "Holding the scaled state for ${hold_seconds}s before demonstrating scale-to-zero"
 sleep "${hold_seconds}"
 
-redis_cli DEL "${VC1_QUEUE}" "${VC3_QUEUE}" >/dev/null
-wait_for_deployment_replicas 1 0
+set_remote_cpu_load 1 false
+redis_cli DEL "${VC3_QUEUE}" >/dev/null
+wait_for_deployment_replicas 1 1
 wait_for_deployment_replicas 3 0
 
 echo
-echo "Scale-to-zero complete; ScaledJob history remains visible in vc-2"
+echo "CPU scale-down and Redis scale-to-zero complete; ScaledJob history remains visible in vc-2"
 show_remote_scaledobject 1
 show_remote_scaledjob 2
 show_remote_scaledobject 3

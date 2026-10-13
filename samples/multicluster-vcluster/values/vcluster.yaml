@@ -18,3 +18,9 @@ controlPlane:
 telemetry:
   enabled: false
 
+integrations:
+  metricsServer:
+    enabled: true
+    nodes: false
+    pods: true
+

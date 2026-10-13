@@ -175,30 +175,33 @@ Then run the remote-scaling portion:
 make present-scaling
 ```
 
-The scaling presentation uses three independent Redis lists so demand and
-autoscaling state cannot leak between vClusters:
+The scaling presentation uses one resource-metrics scenario and two independent
+Redis lists so demand and autoscaling state cannot leak between vClusters:
 
 | vCluster | Remote resource | Input | Expected result |
 | --- | --- | --- | --- |
-| `vc-1` | `ScaledObject` + KPA | 6 Redis items | 2 Deployment replicas |
+| `vc-1` | CPU `ScaledObject` + KPA | CPU load enabled | 3 Deployment replicas |
 | `vc-2` | authenticated `ScaledJob` | 3 Redis items | remote Jobs are created |
 | `vc-3` | `ScaledObject` + KPA | 9 Redis items | 3 Deployment replicas |
 
 ### Scenario 1: an existing ScaledObject in vc-1
 
-`make prepare-scaling-demo` creates a zero-replica `worker` Deployment, a
-`TriggerAuthentication`, and a Redis-backed `ScaledObject` in `vc-1`. Central
-KEDA resolves the authentication Secret through the `vc-1` remote client and
-evaluates that cluster's Redis list. The trigger target is three list items per
-replica, so six items produce a recommendation of two replicas. KPA is created
-inside `vc-1` and applies the recommendation to the remote Deployment.
+`make prepare-scaling-demo` creates a one-replica `worker` Deployment and a
+CPU-backed `ScaledObject` in `vc-1`. The vCluster proxies its host cluster's
+PodMetrics API, allowing central KPA to read CPU usage through the registered
+`vc-1` Kubernetes API. The worker initially sleeps and remains at one replica.
+During the presentation, the script enables a CPU-bound loop in the worker;
+each replica is limited to 500m CPU against a 100m request and the target is
+50% utilization, so KPA deterministically reaches the configured maximum of
+three replicas. Disabling the load rolls out sleeping workers and KPA returns
+the Deployment to its minimum of one replica.
 
 This scenario shows steady-state reconciliation for a vCluster that was
 connected before the presentation:
 
 ```text
-vc-1 ScaledObject -> central KEDA -> Redis list length (6)
-                  -> remote KPA -> vc-1 Deployment (2 replicas)
+vc-1 ScaledObject -> remote metrics.k8s.io CPU samples
+                  -> central KPA -> vc-1 Deployment (1 -> 3 -> 1 replicas)
 ```
 
 ### Scenario 2: an authenticated ScaledJob in vc-2
@@ -236,9 +239,127 @@ create vc-3 -> automatic registration -> remote ScaledObject
                             -> remote KPA -> vc-3 Deployment (3 replicas)
 ```
 
-After holding the scaled state for 20 seconds, the script clears the
-`ScaledObject` queues and demonstrates scale-to-zero. Set
+After holding the scaled state for 20 seconds, the script disables `vc-1` CPU
+load and clears the `vc-3` Redis queue. This demonstrates CPU scale-down to the
+minimum replica count and external-metric scale-to-zero side by side. Set
 `DEMO_HOLD_SECONDS` to keep the scaled state visible for longer.
+
+## Remote KPA resource-metrics integration
+
+CPU and memory scaling follow a different path from Redis and other external
+KEDA scalers. KPA reads the Kubernetes Resource or ContainerResource metric
+directly from the API of the cluster containing the workload:
+
+```text
+vc-1 worker Pod
+      |
+      | CPU usage collected by the host AKS metrics-server
+      v
+vc-1 metrics.k8s.io API
+      |
+      | remote Kubernetes client from ClusterRegistration
+      v
+KPA in the management AKS cluster
+      |
+      | desired replica calculation and remote /scale update
+      v
+vc-1 worker Deployment
+```
+
+The vClusters use the host AKS metrics-server instead of installing a separate
+metrics-server in every tenant cluster. This uses the
+[vCluster metrics-server integration](https://www.vcluster.com/docs/vcluster/configure/vcluster-yaml/integrations/metricsServer)
+and is enabled in `values/vcluster.yaml`:
+
+```yaml
+integrations:
+  metricsServer:
+    enabled: true
+    nodes: false
+    pods: true
+```
+
+These are values for the vCluster Helm chart, not values for KPA or the
+Kedify Agent chart. The shared `install_vcluster` helper in
+`scripts/vcluster-common.sh` passes the file to every vCluster release:
+
+```text
+helm upgrade --install "${name}" vcluster \
+  ... \
+  --values "${REPO_ROOT}/values/vcluster.yaml"
+```
+
+The same helper installs the prepared `vc-1` and `vc-2` releases and the live
+`vc-3` release. This guarantees that a vCluster created during the presentation
+has the same PodMetrics capability as the prepared clusters.
+
+`integrations.metricsServer.enabled: true` registers a metrics API in the
+virtual cluster that reuses the metrics-server running in the host AKS
+cluster. It is intentionally different from:
+
+```yaml
+deploy:
+  metricsServer:
+    enabled: true
+```
+
+The latter would deploy a separate metrics-server add-on for the tenant
+cluster. This demo uses the integration because the vClusters run with shared
+host nodes and AKS already provides a healthy metrics-server.
+
+Only PodMetrics are exposed because KPA needs workload metrics, while the demo
+does not need to expose host NodeMetrics to its tenants. The management AKS
+cluster must therefore have a healthy `metrics.k8s.io` API and the default
+`kube-system/metrics-server` Service expected by this integration.
+
+This setting is part of the vCluster Helm release. After adding or changing it
+for already-running vClusters, apply the update with:
+
+```bash
+make vclusters
+```
+
+The command upgrades `vc-1` and `vc-2` in place. Newly created `vc-3` receives
+the same configuration automatically. `make prepare-scaling-demo` also waits
+for the `vc-1` metrics API before creating the CPU scenario, so a missing
+integration fails during preparation rather than during the presentation.
+
+Check the physical AKS metrics API with:
+
+```bash
+kubectl --kubeconfig .kube/main.yaml \
+  get apiservice v1beta1.metrics.k8s.io
+```
+
+Check the API exposed inside `vc-1` with:
+
+```bash
+KUBECONFIG=.kube/main.yaml \
+vcluster connect vc-1 --namespace vcluster-1 --background-proxy=false -- \
+  kubectl get --raw /apis/metrics.k8s.io/v1beta1
+```
+
+Once the worker Pod is running, inspect its current sample with:
+
+```bash
+KUBECONFIG=.kube/main.yaml \
+vcluster connect vc-1 --namespace vcluster-1 --background-proxy=false -- \
+  kubectl --namespace demo-scaling top pods
+```
+
+If this integration is missing or unavailable, KPA retains the current replica
+count and records `FailedGetMetric` on the remote KPA. Inspect it with:
+
+```bash
+KUBECONFIG=.kube/main.yaml \
+vcluster connect vc-1 --namespace vcluster-1 --background-proxy=false -- \
+  kubectl --namespace demo-scaling describe \
+  kedifypodautoscaler worker-autoscaler
+```
+
+There is no fallback to PodMetrics from a same-name workload in the management
+cluster. The registered vCluster API remains the identity and isolation
+boundary for Pods, metrics, and `/scale` writes.
 
 ## How KEDA reaches Redis
 
@@ -266,18 +387,18 @@ ignored by Git. `make prepare-scaling-demo` first launches a temporary
 `redis-cli` Pod in the main AKS cluster and requires a successful `PING`. This
 proves the network path before any scaling resources are created.
 
-The scripts then create a `redis-auth` Secret independently inside each
-vCluster. The Secret contains the private address and password. For a
+The scripts create a `redis-auth` Secret independently inside `vc-2` and
+`vc-3`. The Secret contains the private address and password. For the `vc-3`
 `ScaledObject`, central KEDA reads that Secret through the registered remote
 Kubernetes client, builds the Redis scaler, and opens the TCP connection from
 the KEDA Pod in the main cluster:
 
 ```text
-vc-1/vc-3 Secret --read through remote API--> KEDA in main AKS
-                                               |
-                                               | TCP, private VNet, :6379
-                                               v
-                                      Redis internal load balancer
+vc-3 Secret --read through remote API--> KEDA in main AKS
+                                          |
+                                          | TCP, private VNet, :6379
+                                          v
+                                 Redis internal load balancer
 ```
 
 The Redis endpoint therefore must be reachable from the management cluster;
