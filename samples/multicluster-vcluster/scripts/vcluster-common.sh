@@ -77,7 +77,7 @@ vcluster_registration_count() {
   if [[ -z "${names}" ]]; then
     printf '0'
   else
-    printf '%s\n' "${names}" | wc -l
+    printf '%s\n' "${names}" | wc -l | tr -d '[:space:]'
   fi
 }
 
