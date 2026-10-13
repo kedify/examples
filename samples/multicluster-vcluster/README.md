@@ -116,7 +116,7 @@ make verify
 ```
 
 The deployment provisions infrastructure, installs released `kedify-agent`
-chart `v0.8.1` (including its KEDA and KPA dependencies), discovers and
+chart `v0.8.2` (including its KEDA and KPA dependencies), discovers and
 bootstraps two vClusters, and exposes Redis privately. It intentionally does
 not create the third vCluster.
 
