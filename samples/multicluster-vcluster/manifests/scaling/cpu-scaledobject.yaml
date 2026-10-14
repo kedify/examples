@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: worker
   namespace: __NAMESPACE__
+  annotations:
+    demo.kedify.io/cpu-control: file-v1
+    demo.kedify.io/cpu-load: "false"
 spec:
   replicas: 1
   selector:
@@ -20,10 +23,13 @@ spec:
             - /bin/sh
             - -c
           args:
-            - if [ "${CPU_LOAD}" = "true" ]; then while true; do :; done; else while true; do sleep 3600; done; fi
-          env:
-            - name: CPU_LOAD
-              value: "false"
+            - |
+              rm -f /tmp/kedify-demo-cpu-load
+              touch /tmp/kedify-demo-cpu-control
+              while true; do
+                while [ -f /tmp/kedify-demo-cpu-load ]; do :; done
+                sleep 1
+              done
           resources:
             requests:
               cpu: 100m

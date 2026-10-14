@@ -2,3 +2,5 @@
 .kube
 .env
 /samples/multicluster-vcluster/state/
+# Diagnostic bundles may contain live cluster manifests and credentials.
+kedify-dump-*/
