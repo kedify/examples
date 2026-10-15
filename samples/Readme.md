@@ -45,9 +45,11 @@ Each directory below contains its own setup instructions or example manifests.
 | [podinfo-webapp][3]                    | This demonstrates howto use OTel collector to scrape metrics from a webapp and use them for scaling (pull model) | OTel |
 | [vllm][4]                              | Three examples that use metrics exposed from accelerator (GPU) to scale LLM models deployed via vLLM: DCGM metrics, sidecar pattern & scraping metrics from router | OTel |
 | [cloudwatch-metric-stream][5]          | This example scales an nginx Deployment from an AWS Network Load Balancer's `NewFlowCount` metric. CloudWatch serializes the metric as OpenTelemetry 1.0 and sends it via OTLP to the KEDA OTel scaler. | OTel |
+| [istio-grpc][6]                       | Scale a gRPC producer from active streams measured by Istio's Envoy sidecars and scraped by an OTel Collector | OTel |
 
 [1]: https://github.com/kedify/otel-add-on/tree/main/examples/dapr
 [2]: https://github.com/kedify/otel-add-on/tree/main/examples/metric-push
 [3]: https://github.com/kedify/otel-add-on/tree/main/examples/metric-pull
 [4]: https://github.com/kedify/otel-add-on/tree/main/examples/vllm
 [5]: https://github.com/kedify/otel-add-on/tree/main/examples/cloudwatch-metric-stream
+[6]: https://github.com/kedify/otel-add-on/tree/main/examples/istio-grpc
