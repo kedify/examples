@@ -169,12 +169,12 @@ func TestCalculateLaterValues(t *testing.T) {
 			t.Errorf("Unexpected error: %v", err)
 		}
 		mm.cycleMinutes = tc.cycle
-		now := time.Now()
-		mm.startTime = &now
 		for _, ev := range tc.expectedValues {
-			// Simulate N minutes later
-			nMinutesLater := now.Add(time.Duration(ev.afterMinutes) * time.Minute)
-			mm.startTime = &nMinutesLater
+			// Sample before the minute boundary without depending on the
+			// clock advancing between two calls or duration rounding.
+			elapsed := time.Duration(ev.afterMinutes)*time.Minute - 30*time.Second
+			startedAt := time.Now().Add(-elapsed)
+			mm.startTime = &startedAt
 
 			if value := mm.calculateValue(); !same(value, ev.value) {
 				t.Errorf("Expected: %d, got: %.0f schedule: %s cycle: %d after: %d min", ev.value, value, tc.schedule, tc.cycle, ev.afterMinutes)
