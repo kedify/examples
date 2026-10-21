@@ -185,6 +185,7 @@ func TestCalculateLaterValues(t *testing.T) {
 
 func TestGetHandler(t *testing.T) {
 	mm := NewMinuteMetrics()
+	mm.timeRelativeToStart = true
 	mm.schedule = []ScheduleItem{
 		{Minute: 0, Value: 2.0},
 		{Minute: 5, Value: 3.0},
