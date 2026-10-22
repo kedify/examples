@@ -1,6 +1,6 @@
 module demo.app.com
 
-go 1.26.10
+go 1.27.3
 
 require (
 	github.com/prometheus/client_golang v1.20.5

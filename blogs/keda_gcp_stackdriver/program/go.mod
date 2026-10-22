@@ -1,6 +1,6 @@
 module program
 
-go 1.26.10
+go 1.27.3
 
 require (
 	cloud.google.com/go/monitoring v1.24.3

@@ -1,6 +1,6 @@
 module github.com/kedify/examples/kafka/kafka-app
 
-go 1.26.10
+go 1.27.3
 
 require github.com/IBM/sarama v1.46.1
 

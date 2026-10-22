@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:1.22-alpine AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.27.3-alpine@sha256:d530cf60723abf1ffae0cd16bb546b379ec0550d2f3815e5b16ed69dbc00fba4 AS builder
 ARG TARGETPLATFORM BUILDPLATFORM TARGETOS TARGETARCH
 WORKDIR /app
 COPY main.go .

@@ -1,6 +1,6 @@
 module github.com/kedify/examples/samples/grpc-responder
 
-go 1.26.10
+go 1.27.3
 
 require (
 	google.golang.org/grpc v1.83.2
