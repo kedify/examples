@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx
+  namespace: demo
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      location / { default_type text/plain; return 200 "Hello from $hostname\n"; }
+      location = /healthz { access_log off; return 200 "ok\n"; }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: demo
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+        ports:
+        - name: http
+          containerPort: 8080
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+        readinessProbe:
+          httpGet:
+            path: "/healthz"
+            port: http
+        livenessProbe:
+          httpGet:
+            path: "/healthz"
+            port: http
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/nginx/conf.d"
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: demo
+spec:
+  selector:
+    app: nginx
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx
+  namespace: demo
+spec:
+  ingressClassName: haproxy
+  rules:
+  - host: nginx.demo.local
+    http:
+      paths:
+      - path: "/"
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              name: http

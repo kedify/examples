@@ -1,0 +1,43 @@
+name: Validate Splunk Flux OTel example
+
+on:
+  push:
+    paths:
+      - samples/splunk-flux-otel/**
+      - .github/workflows/validate-splunk-flux-otel.yaml
+  pull_request:
+    paths:
+      - samples/splunk-flux-otel/**
+      - .github/workflows/validate-splunk-flux-otel.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: samples/splunk-flux-otel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4.3.0
+        with:
+          version: v4.0.4
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.35.0
+      - run: scripts/download-charts.sh
+      - run: ruby scripts/validate.rb
+      - name: Validate with Splunk Collector 0.120.0
+        run: |
+          curl -fsSL https://github.com/signalfx/splunk-otel-collector/releases/download/v0.120.0/otelcol_linux_amd64 -o .cache/otelcol
+          chmod +x .cache/otelcol
+          .cache/otelcol validate --config=.cache/rendered/splunk-collector.yaml
+        env:
+          SPLUNK_OBSERVABILITY_ACCESS_TOKEN: validation
+          SPLUNK_PLATFORM_HEC_TOKEN: validation
+          K8S_NODE_NAME: validation
+          K8S_POD_NAME: validation
+          K8S_NAMESPACE: observability

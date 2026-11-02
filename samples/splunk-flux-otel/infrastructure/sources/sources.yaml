@@ -1,0 +1,49 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: haproxy
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://haproxytech.github.io/helm-charts
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: splunk
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://signalfx.github.io/splunk-otel-collector-chart
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: kedify
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://kedify.github.io/charts
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: otel-scaler
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/kedify/charts/otel-add-on
+  ref:
+    tag: 0.1.5
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: predictor
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/kedify/charts/kedify-predictor
+  ref:
+    tag: 0.1.9

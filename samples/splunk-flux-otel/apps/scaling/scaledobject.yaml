@@ -1,0 +1,26 @@
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: nginx-otel
+  namespace: demo
+spec:
+  scaleTargetRef:
+    name: nginx
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  pollingInterval: 15
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+  triggers:
+  - type: external
+    name: measured
+    metricType: AverageValue
+    metadata:
+      scalerAddress: otel-scaler.keda.svc.cluster.local:4318
+      metricQuery: sum(haproxy_backend_http_requests_total{workload_namespace=demo,workload=nginx})
+      operationOverTime: rate
+      targetValue: '20'

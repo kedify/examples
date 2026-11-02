@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-loadtest
+  namespace: demo
+data:
+  test.js: |
+    import http from 'k6/http';
+    export const options = { scenarios: {
+      normal: { executor: 'constant-arrival-rate', rate: 60, timeUnit: '1s', duration: '180s', preAllocatedVUs: 10, maxVUs: 50 },
+      peak: { executor: 'constant-arrival-rate', rate: 120, timeUnit: '1s', startTime: '190s', duration: '180s', preAllocatedVUs: 10, maxVUs: 50 }
+    }, thresholds: { http_req_failed: ['rate<0.01'], dropped_iterations: ['count==0'] } };
+    export default function () { http.get('http://haproxy-kubernetes-ingress.ingress-system.svc/', { headers: { Host: 'nginx.demo.local' } }); }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nginx-loadtest-01
+  namespace: demo
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 480
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: load
+        image: grafana/k6:1.0.0@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279
+        args:
+        - run
+        - "/scripts/test.js"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: '1'
+            memory: 256Mi
+        volumeMounts:
+        - name: script
+          mountPath: "/scripts"
+      volumes:
+      - name: script
+        configMap:
+          name: nginx-loadtest

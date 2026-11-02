@@ -1,0 +1,38 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: otel-scaler
+  namespace: flux-system
+spec:
+  interval: 10m
+  releaseName: otel-scaler
+  targetNamespace: keda
+  install:
+    remediation:
+      retries: 2
+  upgrade:
+    remediation:
+      retries: 2
+  values:
+    replicaCount: 1
+    service:
+      name: otel-scaler
+    otelCollector:
+      enabled: false
+    otelOperator:
+      enabled: false
+    settings:
+      metricStore:
+        retentionSeconds: 60
+        lazySeries: false
+        lazyAggregates: false
+        errIfNotFound: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  chartRef:
+    kind: OCIRepository
+    name: otel-scaler
+    namespace: flux-system

@@ -1,0 +1,54 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kedify-agent
+  namespace: flux-system
+spec:
+  interval: 10m
+  releaseName: kedify-agent
+  targetNamespace: keda
+  install:
+    remediation:
+      retries: 2
+  upgrade:
+    remediation:
+      retries: 2
+  values:
+    clusterName: mobility-global
+    keda:
+      enabled: false
+    keda-add-ons-http:
+      enabled: false
+    otel-add-on:
+      enabled: false
+    kedify-predictor:
+      enabled: false
+    agent:
+      createApiKeySecret: false
+      kedifyConfiguration:
+        mode: Helm
+        agentAutoUpdate: false
+      rbac:
+        selfUpdates: false
+        shouldBeAbleToInstallKeda: false
+        shouldBeAbleToInstallHttpAddon: false
+        ingressAutoWire: false
+      extraRbacRules:
+      - apiGroups:
+        - ''
+        resources:
+        - configmaps
+        verbs:
+        - get
+        - list
+        - watch
+  chart:
+    spec:
+      chart: kedify-agent
+      version: v0.8.3
+      sourceRef:
+        kind: HelmRepository
+        name: kedify
+        namespace: flux-system
+      interval: 1h

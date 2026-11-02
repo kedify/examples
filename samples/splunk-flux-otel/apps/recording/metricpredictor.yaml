@@ -1,0 +1,19 @@
+---
+apiVersion: keda.kedify.io/v1alpha1
+kind: MetricPredictor
+metadata:
+  name: nginx-recording
+  namespace: demo
+spec:
+  source:
+    keda:
+      active: true
+      kind: scaledobject
+      name: nginx-otel
+      triggerName: measured
+  model:
+    name: nginx-rps
+    type: Prophet
+    defaultHorizon: 10m
+    retrainInterval: 1d
+    retention: 7d
