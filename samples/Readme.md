@@ -30,6 +30,7 @@ Each directory below contains its own setup instructions or example manifests.
 | [otel-scaler-vertical](./otel-scaler-vertical) | Adjust Pod resources with PodResourceProfile from metrics routed through an OTel collector | OTel, PodResourceProfile |
 | [otel-scaler-with-predictor](./otel-scaler-with-predictor) | Combine measured OTel metrics with predictions for autoscaling | OTel, Predictor |
 | [scaling-group](./scaling-group) | Enforce a shared scaling capacity across a group of ScaledObjects | ScalingGroup, Kubernetes Workload |
+| [splunk-flux-otel](./splunk-flux-otel) | Route HAProxy metrics through Splunk's OTel Collector to Splunk and KEDA, managed by Flux with independent Predictor recording | OTel, Splunk, Flux, Predictor |
 | [stable-diffusion](./stable-diffusion) | Scale image-generation workers from a job queue, with GPU support and shared image storage | RabbitMQ Queue, ScaledObject / ScaledJob |
 | [vllm-autoscaling](./vllm-autoscaling) | Deploy vLLM production-stack on GKE and scale from inference metrics | OTel via External scaler |
 | [websocket-server](./websocket-server) | Scale a WebSocket server from incoming traffic | Kedify HTTP |

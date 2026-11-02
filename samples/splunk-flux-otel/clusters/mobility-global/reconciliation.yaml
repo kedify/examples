@@ -1,0 +1,322 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: namespaces
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/namespaces"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sources
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/sources"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: secrets
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/secrets"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: namespaces
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: haproxy
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/haproxy"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: namespaces
+  - name: sources
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: keda
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/keda"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: namespaces
+  - name: sources
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: agent
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/agent"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: secrets
+  - name: keda
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: otel-scaler
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/otel-scaler"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: namespaces
+  - name: sources
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: postgres
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/postgres"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: secrets
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: predictor
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/predictor"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: keda
+  - name: postgres
+  - name: sources
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: splunk
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/infrastructure/splunk"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: secrets
+  - name: haproxy
+  - name: otel-scaler
+  - name: sources
+  wait: true
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: nginx
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/apps/nginx"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: haproxy
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: scaling
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/apps/scaling"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: keda
+  - name: nginx
+  - name: splunk
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: recording
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/apps/recording"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: predictor
+  - name: scaling
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: loadtest
+  namespace: flux-system
+spec:
+  interval: 2m
+  retryInterval: 30s
+  timeout: 10m
+  path: "./samples/splunk-flux-otel/apps/loadtest"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+  - name: scaling
+  suspend: true
+  wait: true

@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: keda
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: keda
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+      annotations:
+        poc.kedify.io/persistence-check: '2026-10-29'
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+        ports:
+        - name: postgres
+          containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: predictor
+        - name: POSTGRES_USER
+          value: predictor
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - "-U"
+            - predictor
+            - "-d"
+            - predictor
+          initialDelaySeconds: 10
+        volumeMounts:
+        - name: data
+          mountPath: "/var/lib/postgresql/data"
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: managed-csi
+      resources:
+        requests:
+          storage: 8Gi

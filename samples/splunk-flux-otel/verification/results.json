@@ -1,0 +1,62 @@
+{
+  "verified_on": "2026-10-29",
+  "context": "mobility-global",
+  "splunk_backend": "Cloud Platform trial (HEC), not Observability Cloud",
+  "metrics_index": "mobility_metrics",
+  "report": "Mobility Global - nginx request rate",
+  "loadtest": {
+    "requests": 32401,
+    "failed": 0,
+    "dropped_iterations": 0,
+    "job": "demo/nginx-loadtest-01",
+    "status": "Complete"
+  },
+  "predictor_independence": {
+    "replicas_during_peak": 0,
+    "nginx_replicas_during_peak": 5,
+    "recorded_sample_count_while_paused": 10,
+    "restored_replicas": 1
+  },
+  "postgres_persistence": {
+    "pod_recreated": true,
+    "pvc": "keda/data-postgres-0",
+    "history_preserved": true
+  },
+  "observations": [
+    {
+      "utc": "2026-10-29T15:28:24.932410+00:00",
+      "rps": 60.02,
+      "error": "",
+      "desired": 3,
+      "ready": 3,
+      "postgres": "5|60.018"
+    },
+    {
+      "utc": "2026-10-29T15:31:37.995656+00:00",
+      "rps": 120.02,
+      "error": "",
+      "desired": 5,
+      "ready": 5,
+      "postgres": "10|60.018"
+    },
+    {
+      "utc": "2026-10-29T15:33:14.337386+00:00",
+      "rps": 119.98,
+      "error": "",
+      "desired": 5,
+      "ready": 5,
+      "postgres": "11|119.982"
+    },
+    {
+      "utc": "2026-10-29T15:35:22.285637+00:00",
+      "rps": 0,
+      "error": "",
+      "desired": 1,
+      "ready": 1,
+      "postgres": "19|119.982"
+    }
+  ],
+  "final_postgres_sample_count_at_check": 21,
+  "final_nginx_replicas": 1,
+  "tls_limitation": "The trial HEC endpoint has a self-signed certificate without SAN; verification bypass is scoped to that exporter."
+}

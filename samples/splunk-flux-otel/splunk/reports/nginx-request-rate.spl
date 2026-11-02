@@ -1,0 +1,2 @@
+| mstats rate_sum(haproxy_backend_http_requests_total) AS requests_per_second
+  WHERE index=mobility_metrics proxy=demo_svc_nginx_http span=30s

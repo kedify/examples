@@ -1,0 +1,139 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: splunk-otel
+  namespace: flux-system
+spec:
+  interval: 10m
+  releaseName: splunk-otel
+  targetNamespace: observability
+  install:
+    remediation:
+      retries: 2
+    disableSchemaValidation: true
+  upgrade:
+    remediation:
+      retries: 2
+    disableSchemaValidation: true
+  values:
+    clusterName: mobility-global
+    cloudProvider: azure
+    distribution: aks
+    image:
+      otelcol:
+        tag: 0.120.0
+    secret:
+      create: false
+      name: splunk-credentials
+      validateSecret: true
+    autodetect:
+      prometheus: false
+    clusterReceiver:
+      enabled: true
+      config:
+        receivers:
+          prometheus/haproxy:
+            config:
+              scrape_configs:
+              - job_name: haproxy
+                scrape_interval: 5s
+                kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names:
+                    - ingress-system
+                relabel_configs:
+                - source_labels:
+                  - __meta_kubernetes_pod_label_scaling_metrics
+                  action: keep
+                  regex: haproxy
+                - source_labels:
+                  - __meta_kubernetes_pod_container_port_name
+                  action: keep
+                  regex: stat
+                - source_labels:
+                  - __meta_kubernetes_pod_phase
+                  action: keep
+                  regex: Running
+                - source_labels:
+                  - __meta_kubernetes_pod_name
+                  target_label: pod
+                - source_labels:
+                  - __meta_kubernetes_pod_uid
+                  target_label: producer_uid
+        processors:
+          filter/scaling:
+            error_mode: propagate
+            metrics:
+              metric:
+              - name != "haproxy_backend_http_requests_total"
+              datapoint:
+              - attributes["proxy"] != "demo_svc_nginx_http"
+          transform/scaling:
+            error_mode: propagate
+            metric_statements:
+            - context: datapoint
+              statements:
+              - set(attributes["workload_namespace"], "demo")
+              - set(attributes["workload"], "nginx")
+          batch/scaling:
+            timeout: 1s
+        exporters:
+          otlp/scaling:
+            endpoint: otel-scaler.keda.svc.cluster.local:4317
+            tls:
+              insecure: true
+            sending_queue:
+              enabled: true
+              queue_size: 100
+            retry_on_failure:
+              enabled: true
+              max_elapsed_time: 15s
+              max_interval: 5s
+        service:
+          pipelines:
+            metrics/haproxy:
+              receivers:
+              - prometheus/haproxy
+              processors:
+              - memory_limiter
+              - resource
+              - batch
+              exporters:
+              - splunk_hec/platform_metrics
+            metrics/scaling:
+              receivers:
+              - prometheus/haproxy
+              processors:
+              - memory_limiter
+              - filter/scaling
+              - transform/scaling
+              - batch/scaling
+              exporters:
+              - otlp/scaling
+    splunkPlatform:
+      endpoint: "${SPLUNK_HEC_ENDPOINT}"
+      index: mobility_metrics
+      metricsIndex: mobility_metrics
+      metricsEnabled: true
+      logsEnabled: false
+      tracesEnabled: false
+      insecureSkipVerify: false
+    agent:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 200m
+          memory: 500Mi
+  chart:
+    spec:
+      chart: splunk-otel-collector
+      version: 0.120.0
+      sourceRef:
+        kind: HelmRepository
+        name: splunk
+        namespace: flux-system
+      interval: 1h
