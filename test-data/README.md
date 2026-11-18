@@ -1,5 +1,7 @@
 # Testing resources for Kedify & KEDA
 
+[Rightsizing test workloads](rightsizing/) exercise CPU, memory, and optional GPU recommendations.
+
 ## Install all test resources
 Copy and run this block to install all test resources:
 

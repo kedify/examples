@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rightsizing-gpu
+resources:
+  - inference.yaml
+images:
+  - name: vllm/vllm-openai
+    digest: sha256:607442e407b0fea97f8a132a78b787c121a996dd4de181fa08e8da06e71ec2db
