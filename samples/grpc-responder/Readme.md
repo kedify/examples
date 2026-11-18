@@ -207,7 +207,7 @@ kubectl -n traefik get service traefik
 
 ### Autoscaling with KEDA
 
-For both versions of the `grpc-responder`, there are also two versions of the `ScaledObject` with trigger `kedify-http` - plaintext and TLS. Support for TLS includes end-to-end encryption with re-encryption on the `kedify-proxy` and `interceptor` to allow L7 routing. For plaintext gRPC, there is currently a limitted support for cold-starts, it's recommended to scale to 1. For gRPC with TLS, scale to zero works fully as expected.
+For both versions of the `grpc-responder`, there are also two versions of the `ScaledObject` with trigger `kedify-http` - plaintext and TLS. Support for TLS includes end-to-end encryption with re-encryption on the `kedify-proxy` and `interceptor` to allow L7 routing. For plaintext gRPC, there is currently a limitted support for cold-starts, it's recommended to scale to 1. For gRPC with TLS and Traefik, use a Kedify HTTP add-on release whose proxy TLS listener advertises HTTP/2 through ALPN. Traefik needs HTTP/2 to preserve gRPC response trailers during cold starts.
 
 When the application is deployed without TLS, use:
 ```

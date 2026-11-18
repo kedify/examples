@@ -5,6 +5,8 @@ helm upgrade --install --wait kedify-agent --namespace keda --create-namespace o
 
 The agent also enhances KEDA capabilities with additional features. In scope of this scenario, you are going to learn about the HTTP scaler with streamlined management of `Ingress`{{}} resources.
 
+The tutorial chart must deploy a Kedify HTTP add-on release whose proxy TLS listener advertises HTTP/2 through ALPN.
+
 > Learn more about the Kedify HTTP Scaler -> https://kedify.io/scalers/http
 
 After the agent is deployed, it will install KEDA and other necessary dependencies, you can observe all getting installed with:
