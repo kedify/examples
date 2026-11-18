@@ -19,6 +19,8 @@ spec:
       labels:
         app: vllm
     spec:
+      # Prevent the Service from injecting VLLM_PORT into the engine.
+      enableServiceLinks: false
       nodeSelector:
         kubernetes.io/os: linux
       tolerations:
