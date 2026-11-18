@@ -35,7 +35,7 @@ spec:
             - --enforce-eager
             - --gpu-memory-utilization=0.35
             - --max-model-len=512
-            - --max-num-seqs=32
+            - --max-num-seqs=4
           ports:
             - name: http
               containerPort: 8000

@@ -24,6 +24,7 @@ The HPA and `kubectl top` need a working Kubernetes Metrics API.
 | `mixed-containers` | Application memory usage exceeds its request while the idle nginx sidecar has oversized requests. Look for distinct per-container recommendations. |
 | `startup-spike` | The same container starts on a 90-second CPU and memory spike, then drops to steady state. Use `kubectl -n rightsizing rollout restart deploy/startup-spike` to collect another startup sample. |
 | `hpa-container` | A CPU utilization HPA scales to its two-replica cap using only the application container. Check whether a request change also changes the effective HPA target for that container. |
+| `hpa-idle-floor` | A quiet workload stays at its two-replica minimum. Check for a minimum replica recommendation and whether it explains the availability tradeoff. |
 | `missing-resources` | nginx has no requests or limits. Check for missing-resource findings and sensible initial values. |
 | `memory-growth` | Retains 8 MiB more every five minutes for 3 hours 20 minutes, then holds. Check for sustained growth after warm-up and whether the tool avoids a premature limit reduction. Restart the Deployment to replay the ramp. |
 | `short-batch` | A 45-second CronJob runs every 10 minutes. Check whether usage is collected and grouped across Job runs. |
@@ -68,8 +69,9 @@ curl -fsS http://localhost:8000/v1/completions \
 ```
 
 Observe an idle baseline first, then run the three-minute burst from inside the
-cluster. The benchmark reports completed tokens per second, p95 request latency,
-and errors. Use vLLM's `/metrics` for queue depth, KV cache utilization and time
+cluster. Eight clients send requests while vLLM processes up to four sequences
+at once, creating opportunities to observe queueing. The benchmark reports
+completed tokens per second, p95 request latency, and errors. Use vLLM's `/metrics` for queue depth, KV cache utilization and time
 to first token. Compare those with DCGM compute activity and framebuffer
 allocation. vLLM preallocates KV cache, so GPU memory can stay allocated while
 compute is idle.

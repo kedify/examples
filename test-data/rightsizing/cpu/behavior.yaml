@@ -166,3 +166,49 @@ spec:
           resources:
             requests: {cpu: 25m, memory: 96Mi}
             limits: {cpu: 150m, memory: 448Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-idle-floor
+spec:
+  selector:
+    matchLabels:
+      app: hpa-idle-floor
+  template:
+    metadata:
+      labels:
+        app: hpa-idle-floor
+    spec:
+      containers:
+        - name: load-generator
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "20"
+            - name: BASELINE_MEMORY_MIB
+              value: "64"
+          resources:
+            requests: {cpu: 100m, memory: 96Mi}
+            limits: {cpu: 300m, memory: 192Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-idle-floor
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-idle-floor
+  minReplicas: 2
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
