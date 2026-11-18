@@ -1,0 +1,168 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: startup-spike
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: startup-spike
+  template:
+    metadata:
+      labels:
+        app: startup-spike
+    spec:
+      containers:
+        - name: load-generator
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "50"
+            - name: BASELINE_MEMORY_MIB
+              value: "64"
+            - name: SCHEDULE_JSON
+              value: '{"steps":[{"profile":"high","durationSeconds":90},{"profile":"idle","durationSeconds":30}]}'
+          resources:
+            requests: {cpu: 200m, memory: 256Mi}
+            limits: {cpu: "1", memory: 768Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 90
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-container
+spec:
+  selector:
+    matchLabels:
+      app: hpa-container
+  template:
+    metadata:
+      labels:
+        app: hpa-container
+    spec:
+      containers:
+        - name: application
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "230"
+            - name: BASELINE_MEMORY_MIB
+              value: "64"
+          resources:
+            requests: {cpu: 100m, memory: 96Mi}
+            limits: {cpu: 500m, memory: 192Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+        - name: sidecar
+          image: nginx
+          resources:
+            requests: {cpu: 100m, memory: 96Mi}
+            limits: {cpu: 250m, memory: 192Mi}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-container
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-container
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: ContainerResource
+      containerResource:
+        name: cpu
+        container: application
+        target:
+          type: Utilization
+          averageUtilization: 55
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: missing-resources
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: missing-resources
+  template:
+    metadata:
+      labels:
+        app: missing-resources
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mixed-containers
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: mixed-containers
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unschedulable-selector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unschedulable-selector
+  template:
+    metadata:
+      labels:
+        app: unschedulable-selector
+    spec:
+      nodeSelector:
+        rightsizing.test/node-class: fixture-only
+      containers:
+        - name: nginx
+          image: nginx
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {cpu: 100m, memory: 96Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-growth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-growth
+  template:
+    metadata:
+      labels:
+        app: memory-growth
+    spec:
+      containers:
+        - name: worker
+          image: python
+          command:
+            - python
+            - -u
+            - -c
+            - |
+              import time
+
+              chunks = [bytearray(b"x") * (24 * 1024 * 1024)]
+              for _ in range(40):
+                  time.sleep(300)
+                  chunks.append(bytearray(b"x") * (8 * 1024 * 1024))
+                  print(f"Retained {(len(chunks) - 1) * 8 + 24} MiB")
+              while True:
+                  time.sleep(300)
+          resources:
+            requests: {cpu: 25m, memory: 96Mi}
+            limits: {cpu: 150m, memory: 448Mi}

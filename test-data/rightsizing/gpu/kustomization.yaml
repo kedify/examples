@@ -3,6 +3,13 @@ kind: Kustomization
 namespace: rightsizing-gpu
 resources:
   - inference.yaml
+  - load.yaml
+configMapGenerator:
+  - name: vllm-benchmark
+    files:
+      - load.py
 images:
   - name: vllm/vllm-openai
     digest: sha256:607442e407b0fea97f8a132a78b787c121a996dd4de181fa08e8da06e71ec2db
+  - name: python
+    digest: sha256:9ef1a599f863231c3d91e941389bfdc4a2d6070557243d54df1a4e57015b960e

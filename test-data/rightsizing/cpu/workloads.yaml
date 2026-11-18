@@ -84,7 +84,7 @@ spec:
           readinessProbe:
             httpGet: {path: /healthz, port: 8080}
         - name: sidecar
-          image: nginx:1.28-alpine
+          image: nginx
           resources:
             requests: {cpu: 300m, memory: 256Mi}
             limits: {cpu: 500m, memory: 384Mi}

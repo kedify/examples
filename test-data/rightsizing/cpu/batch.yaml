@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: short-batch
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 90
+      ttlSecondsAfterFinished: 3600
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: short-batch
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: worker
+              image: python
+              command:
+                - python
+                - -c
+                - |
+                  import hashlib
+                  import time
+
+                  data = bytearray(b"x") * (96 * 1024 * 1024)
+                  block = memoryview(data)[:1024 * 1024]
+                  deadline = time.monotonic() + 45
+                  while time.monotonic() < deadline:
+                      hashlib.sha256(block).digest()
+              resources:
+                requests: {cpu: 100m, memory: 64Mi}
+                limits: {cpu: 250m, memory: 192Mi}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: memory-oom
+spec:
+  schedule: "7,37 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 90
+      ttlSecondsAfterFinished: 7200
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: memory-oom
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: worker
+              image: python
+              command:
+                - python
+                - -c
+                - |
+                  import time
+
+                  time.sleep(20)
+                  data = bytearray(b"x") * (112 * 1024 * 1024)
+                  time.sleep(10)
+              resources:
+                requests: {cpu: 25m, memory: 32Mi}
+                limits: {cpu: 150m, memory: 64Mi}
