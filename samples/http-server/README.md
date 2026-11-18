@@ -40,12 +40,30 @@ make docker-push
 
 ### Deploy in k3d
 
-This setup works with a default k3d cluster and the Traefik ingress controller.
-
-1. **Create the k3d Cluster**:
+1. **Create a k3d cluster with Traefik**. Use [Traefik’s Ingress NGINX compatibility provider](https://doc.traefik.io/traefik/reference/install-configuration/providers/kubernetes/kubernetes-ingress-nginx/) on a fresh lab cluster. It handles the `nginx` IngressClass and the annotations shown below. The [community ingress-nginx controller was retired](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/).
 
    ```bash
-   k3d cluster create --port "9080:80@loadbalancer"
+   k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
+
+   helm upgrade --install traefik traefik \
+     --repo https://traefik.github.io/charts \
+     --version 42.4.0 \
+     --namespace traefik --create-namespace \
+     --skip-crds \
+     --set providers.kubernetesCRD.enabled=false \
+     --set ingressClass.enabled=false \
+     --set providers.kubernetesIngress.enabled=false \
+     --set providers.kubernetesIngressNGINX.enabled=true \
+     --set providers.kubernetesIngressNGINX.publishService.enabled=true
+
+   kubectl apply -f - <<'EOF'
+   apiVersion: networking.k8s.io/v1
+   kind: IngressClass
+   metadata:
+     name: nginx
+   spec:
+     controller: k8s.io/ingress-nginx
+   EOF
    ```
 
 2. **Deploy Server**:
@@ -53,6 +71,8 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
    ```bash
    kubectl apply -f ./config/manifests.yaml
    ```
+
+   On arm64 nodes, use `./config/manifests-arm.yaml`.
 
 3. **Configure Response Delay (Optional)**:
 
@@ -136,66 +156,27 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
 
    This will cause approximately 10% of requests on endpoint `/error` to return a 500 Internal Server Error.
 
-### Deploy in k3d with TLS and NGINX Ingress
+### Deploy in k3d with TLS
 
 You can run the HTTP server with `TLS_ENABLED=true` and Kubernetes secrets for certificate management.
 
-1. **Create a k3d cluster with Traefik**. Use [Traefik’s Ingress NGINX compatibility provider](https://doc.traefik.io/traefik/reference/install-configuration/providers/kubernetes/kubernetes-ingress-nginx/) on a fresh lab cluster. It handles the `nginx` IngressClass and the annotations shown below. The [community ingress-nginx controller was retired](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/).
+1. **Create a k3d cluster with Traefik**. Follow the cluster and ingress installation in [Deploy in k3d](#deploy-in-k3d).
+
+2. **Deploy the Server with TLS Enabled**:
+
+   Generate a certificate for the lab and apply the manifests. Replace the bundled fixture certificate before making requests.
 
    ```bash
-   k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
-
-   helm upgrade --install traefik traefik \
-     --repo https://traefik.github.io/charts \
-     --version 42.4.0 \
-     --namespace traefik --create-namespace \
-     --set ingressClass.enabled=false \
-     --set providers.kubernetesIngress.enabled=false \
-     --set providers.kubernetesIngressNGINX.enabled=true \
-     --set providers.kubernetesIngressNGINX.publishService.enabled=true
-
-   kubectl apply -f - <<'EOF'
-   apiVersion: networking.k8s.io/v1
-   kind: IngressClass
-   metadata:
-     name: nginx
-   spec:
-     controller: k8s.io/ingress-nginx
-   EOF
+   openssl req -x509 -nodes -days 30 -newkey rsa:2048 \
+     -keyout tls.key -out tls.crt -subj "/CN=tls-demo.keda" \
+     -addext "subjectAltName=DNS:tls-demo.keda"
+   kubectl apply -f config/tls-manifests.yaml
+   kubectl create secret tls http-server-tls --cert=tls.crt --key=tls.key --dry-run=client -o yaml | kubectl apply -f -
+   kubectl rollout restart deployment/http-server-tls
+   kubectl rollout status deployment/http-server-tls
    ```
 
-2. **Generate and Apply TLS Certificates**:
-
-  For development, you can use self-signed certs:
-  
-  ```bash
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout certs/tls.key -out certs/tls.crt \
-    -subj "/CN=tls-demo.keda/O=tls-demo.keda"
-  
-  kubectl create secret tls http-server-tls --cert=certs/tls.crt --key=certs/tls.key
-  ```
-
-3. **Deploy the Server with TLS Enabled**:
-
-  Update your deployment to include:
-  
-  ```yaml
-  - name: TLS_ENABLED
-    value: "true"
-  - name: TLS_CERT_FILE
-    value: "/certs/tls.crt"
-  - name: TLS_KEY_FILE
-    value: "/certs/tls.key"
-  ```
-  
-  Apply your deployment and ingress manifests:
-  
-  ```bash
-  kubectl apply -f config/tls-manifests.yaml
-  ```
-
-3.1. **Configure TLS Delays** (Optional):
+3. **Configure TLS Delays** (Optional):
 
   It's possible to artificially introduce delays on the network layer for testing various scenarios with degraded network performance.
 
@@ -212,17 +193,11 @@ You can run the HTTP server with `TLS_ENABLED=true` and Kubernetes secrets for c
 
   These variables control the delays for accepting connections, reading from the connection, writing to the connection, and the expiration timeout for these operations.
 
-4. **Test TLS with Host Header**:
+4. **Test TLS**:
 
-  ```bash
-  curl -H "Host: tls-demo.keda" -vk https://localhost:9443/
-  ```
-
-  **Note:** If you’re using self-signed certs you’ll need to tell `curl` to skip verification:
-
-  ```bash
-  curl -H "Host: tls-demo.keda" -k https://localhost:9443/
-  ```
+   ```bash
+   curl --cacert tls.crt --resolve tls-demo.keda:9443:127.0.0.1 https://tls-demo.keda:9443/
+   ```
 
 5. **Enable Autoscaling (TLS version)**:
 
@@ -230,8 +205,8 @@ You can run the HTTP server with `TLS_ENABLED=true` and Kubernetes secrets for c
   kubectl apply -f config/tls-so.yaml
   ```
 
-6. **Test Higher Load (to trigger autoscaling)**:
+6. **Test Higher Load (to trigger autoscaling)**. Add `127.0.0.1 tls-demo.keda` to `/etc/hosts` first.
 
   ```bash
-  hey -n 100000 -c 100 -host "tls-demo.keda" https://localhost:9443/
+  hey -n 100000 -c 100 https://tls-demo.keda:9443/
   ```

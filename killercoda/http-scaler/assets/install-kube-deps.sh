@@ -26,6 +26,8 @@ helm upgrade --install traefik traefik \
   --repo https://traefik.github.io/charts \
   --version 42.4.0 \
   --namespace traefik --create-namespace \
+  --skip-crds \
+  --set providers.kubernetesCRD.enabled=false \
   --set ingressClass.enabled=false \
   --set providers.kubernetesIngress.enabled=false \
   --set providers.kubernetesIngressNGINX.enabled=true \

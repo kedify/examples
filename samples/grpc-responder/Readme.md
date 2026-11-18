@@ -91,6 +91,8 @@ helm upgrade --install traefik traefik \
   --repo https://traefik.github.io/charts \
   --version 42.4.0 \
   --namespace traefik --create-namespace \
+  --skip-crds \
+  --set providers.kubernetesCRD.enabled=false \
   --set ingressClass.enabled=false \
   --set providers.kubernetesIngress.enabled=false \
   --set providers.kubernetesIngressNGINX.enabled=true \
@@ -169,7 +171,13 @@ kubectl -n traefik get service traefik
    Apply the updated application and TLS-enabled ingress configurations:
 
    ```bash
+   openssl req -x509 -nodes -days 30 -newkey rsa:2048 \
+     -keyout server.key -out server.crt -subj "/CN=grpc.keda" \
+     -addext "subjectAltName=DNS:grpc.keda"
    kubectl apply -f config/app.yaml
+   kubectl create secret tls grpc-responder --cert=server.crt --key=server.key --dry-run=client -o yaml | kubectl apply -f -
+   kubectl rollout restart deployment/grpc-responder
+   kubectl rollout status deployment/grpc-responder
    kubectl apply -f config/ingress-tls.yaml
    ```
 
@@ -183,7 +191,7 @@ kubectl -n traefik get service traefik
 
 4. **Run the Test**:
 
-   Test the gRPC service with TLS using `grpcurl`:
+   Call the gRPC service and verify its certificate with `grpcurl`:
 
    ```bash
    grpcurl -d '{"name": "Test"}' -cacert server.crt grpc.keda:9443 responder.HelloService/SayHello
