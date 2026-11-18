@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: nginx2
-        image: nginx
+        image: nginx:1.30.7
         resources:
           requests:
             memory: 50M

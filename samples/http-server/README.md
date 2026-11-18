@@ -138,28 +138,31 @@ This setup works with a default k3d cluster and the Traefik ingress controller.
 
 ### Deploy in k3d with TLS and NGINX Ingress
 
-You can run the HTTP server with TLS enabled behind the NGINX ingress controller using `TLS_ENABLED=true` and Kubernetes secrets for certificate management.
+You can run the HTTP server with `TLS_ENABLED=true` and Kubernetes secrets for certificate management.
 
-1. **Create a k3d Cluster with NGINX**:
+1. **Create a k3d cluster with Traefik**. Use [Traefik’s Ingress NGINX compatibility provider](https://doc.traefik.io/traefik/reference/install-configuration/providers/kubernetes/kubernetes-ingress-nginx/) on a fresh lab cluster. It handles the `nginx` IngressClass and the annotations shown below. The [community ingress-nginx controller was retired](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/).
 
-  Create k3d cluster with disabled Traefik ingress controller:
-  
-  ```bash
-  k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg   "--disable=traefik@server:*"
-  ```
-  
-  Install the NGINX ingress controller:
-  
-  ```bash
-  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-  helm repo update
-  
-  helm install nginx-ingress ingress-nginx/ingress-nginx \
-    --namespace nginx-ingress \
-    --create-namespace \
-    --set controller.publishService.enabled=true \
-    --set controller.service.type=LoadBalancer
-  ```
+   ```bash
+   k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
+
+   helm upgrade --install traefik traefik \
+     --repo https://traefik.github.io/charts \
+     --version 42.4.0 \
+     --namespace traefik --create-namespace \
+     --set ingressClass.enabled=false \
+     --set providers.kubernetesIngress.enabled=false \
+     --set providers.kubernetesIngressNGINX.enabled=true \
+     --set providers.kubernetesIngressNGINX.publishService.enabled=true
+
+   kubectl apply -f - <<'EOF'
+   apiVersion: networking.k8s.io/v1
+   kind: IngressClass
+   metadata:
+     name: nginx
+   spec:
+     controller: k8s.io/ingress-nginx
+   EOF
+   ```
 
 2. **Generate and Apply TLS Certificates**:
 

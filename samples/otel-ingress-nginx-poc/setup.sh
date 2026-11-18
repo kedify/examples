@@ -1,18 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
+# This sample consumes the community-compatible metrics of an existing controller.
+if ! kubectl -n ingress-nginx get service ingress-nginx-controller-metrics >/dev/null; then
+   echo 'An existing, vendor-supported controller with patched NGINX and compatible metrics is required. See README.md.' >&2
+   exit 1
+fi
+
 helm upgrade --install my-app-be \
    --namespace app \
    --create-namespace \
    oci://ghcr.io/apollographql/helm-charts/router \
    -f ./apollo-values.yaml
-
-helm upgrade --install ingress-nginx ingress-nginx \
-   --repo https://kubernetes.github.io/ingress-nginx \
-   --reuse-values \
-   --namespace ingress-nginx \
-   --create-namespace \
-   --set controller.metrics.enabled=true
 
 # kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller-metrics 10254
 #open http://localhost:10254/metrics
