@@ -8,4 +8,4 @@
 
 Temporary reviewer fixture: see the [pilot checklist](kedifybot-pilot-checklist-not-present.md).
 
-This temporary section is used to test two separate follow-up reviews.
+This temporary section is used to test follow-up reviews after reconnecting the Claude App.
