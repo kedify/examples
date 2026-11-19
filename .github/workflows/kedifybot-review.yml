@@ -73,7 +73,7 @@ jobs:
           reviews=$(gh api --paginate --slurp "repos/$repo/pulls/$pr/reviews?per_page=100")
           jq -e --argjson bot "$bot" --arg head "$head" '
             all(.[][]; .user.id != $bot or .commit_id != $head or .state != "COMMENTED" or
-              ((.body // "") | rtrimstr("\n") | endswith("<!-- kedifybot:public-review:" + $head + " -->") | not))
+              ((.body // "") | contains("<!-- kedifybot:public-review:" + $head + " -->") | not))
           ' <<< "$reviews" >/dev/null || exit 0
           printf 'action=%s\npr=%s\nhead=%s\n' "$action" "$pr" "$head" >> "$GITHUB_OUTPUT"
 
