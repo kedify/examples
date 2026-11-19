@@ -81,7 +81,7 @@ jobs:
         if: steps.gate.outputs.head != ''
         env:
           ROUTINE_ID: ${{ vars.KEDIFY_REVIEW_ROUTINE_ID }}
-          ROUTINE_TOKEN: ${{ secrets.KEDIFY_REVIEW_ROUTINE_TOKEN }}
+          ROUTINE_TOKEN: ${{ secrets.CLAUDE_ROUTINE_TOKEN }}
           ACTION: ${{ steps.gate.outputs.action }}
           PR: ${{ steps.gate.outputs.pr }}
           HEAD_SHA: ${{ steps.gate.outputs.head }}
