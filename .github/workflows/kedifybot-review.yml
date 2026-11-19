@@ -113,6 +113,23 @@ jobs:
             exit 0
           done <<< "$claims"
 
+          # GitHub can discard artifacts when rerunning the same workflow run.
+          if (( GITHUB_RUN_ATTEMPT > 1 )); then
+            jobs=$(github_api --paginate --slurp --method GET "repos/$repo/actions/runs/$GITHUB_RUN_ID/jobs" \
+              -f filter=all -F per_page=100)
+            if jq -e '
+              (now - 86400 | todateiso8601) as $cutoff |
+              any(.[].jobs[];
+                any(.steps[]; .name == "Start Claude review" and
+                  .started_at >= $cutoff and .conclusion != "skipped") and
+                all(.steps[]; .name != "Release rejected review claim" or .conclusion != "success"))
+            ' <<< "$jobs" >/dev/null; then
+              echo 'An earlier attempt may already have started a Claude review.'
+              printf 'claim=%s\n' "$claim" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
           payload=$(jq -nc --arg repo "$repo" --arg action "$action" --argjson pr "$pr" \
             --arg head "$head" --arg baseRef "$base_ref" --arg requestId "$request_id" '
             {text: ({version: 2, $repo, $action, $pr, $head, $baseRef,
@@ -125,10 +142,12 @@ jobs:
         env:
           KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_ID: ${{ secrets.KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_ID }}
           KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_TOKEN: ${{ secrets.KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_TOKEN }}
+          KEDIFY_PUBLIC_REPO_REVIEW_PAYLOAD: ${{ steps.gate.outputs.payload }}
         run: |
           set -euo pipefail
-          if [[ ! $KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_ID =~ ^trig_[A-Za-z0-9]+$ ||
-                -z $KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_TOKEN ]]; then
+          if [[ -n $KEDIFY_PUBLIC_REPO_REVIEW_PAYLOAD &&
+                ( ! $KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_ID =~ ^trig_[A-Za-z0-9]+$ ||
+                -z $KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_TOKEN ) ]]; then
             echo 'The Claude routine ID or token is missing from this run.' >&2
             exit 1
           fi
@@ -147,7 +166,7 @@ jobs:
 
       - name: Start Claude review
         id: dispatch
-        if: steps.gate.outputs.claim != ''
+        if: steps.gate.outputs.payload != ''
         env:
           KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_ID: ${{ secrets.KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_ID }}
           KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_TOKEN: ${{ secrets.KEDIFY_PUBLIC_REPO_REVIEW_CLAUDE_ROUTINE_TOKEN }}
