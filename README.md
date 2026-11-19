@@ -7,3 +7,5 @@
 - [test-data](test-data) easy to use test data for various Kedify & KEDA resources
 
 Temporary reviewer fixture: see the [pilot checklist](kedifybot-pilot-checklist-not-present.md).
+
+This temporary section is used to test the follow-up review.
