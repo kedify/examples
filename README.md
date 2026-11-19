@@ -6,4 +6,4 @@
   - [Splunk, Flux and OTel autoscaling](samples/splunk-flux-otel) routes HAProxy metrics to Splunk and KEDA, with independent Predictor recording
 - [test-data](test-data) easy to use test data for various Kedify & KEDA resources
 
-Temporary same-repository reviewer fixture: see the [pilot checklist](kedifybot-same-repo-checklist-not-present.md).
+Temporary same-repository reviewer fixture: see the [project license](LICENSE).
