@@ -120,13 +120,14 @@ jobs:
           if (( GITHUB_RUN_ATTEMPT > 1 )); then
             jobs=$(github_api --paginate --slurp --method GET "repos/$repo/actions/runs/$GITHUB_RUN_ID/jobs" \
               -f filter=all -F per_page=100)
-            if jq -e --arg dispatch "Start Claude review $scope" '
+            held=$(jq -r --arg dispatch "Start Claude review $scope" '
               (now - 86400 | todateiso8601) as $cutoff |
               any(.[].jobs[];
-                any(.steps[]; .name == $dispatch and
+                any(.steps[]?; .name == $dispatch and
                   .started_at >= $cutoff and .conclusion != "skipped") and
-                all(.steps[]; .name != "Release rejected review claim" or .conclusion != "success"))
-            ' <<< "$jobs" >/dev/null; then
+                all(.steps[]?; .name != "Release rejected review claim" or .conclusion != "success"))
+            ' <<< "$jobs")
+            if [[ "$held" == true ]]; then
               echo 'An earlier attempt may already have started a Claude review.'
               printf 'claim=%s\nscope=%s\n' "$claim" "$scope" >> "$GITHUB_OUTPUT"
               exit 0
