@@ -1,3 +1,5 @@
+This sample expects an existing, vendor-supported Ingress NGINX-compatible controller that provides `nginx_ingress_controller_connect_duration_seconds_count`. Verify that its image carries the fixes in the [NGINX security advisories](https://nginx.org/en/security_advisories.html) and that the metrics Service is reachable. The [community ingress-nginx controller was retired](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/).
+
 # Setup
 1. install the Apollo Router backend
 
@@ -9,15 +11,10 @@ helm upgrade --install my-app-be \
    -f ./apollo-values.yaml
 ```
 
-2. expose the ingress-nginx metrics endpoint
+2. Verify that the existing metrics Service is available. If you use a different service name or namespace, update both the preflight check in `setup.sh` and the scrape target in `otel-scaler-values.yaml`.
 
-```
-helm upgrade --install ingress-nginx ingress-nginx \
-   --repo https://kubernetes.github.io/ingress-nginx \
-   --reuse-values \
-   --namespace ingress-nginx \
-   --create-namespace \
-   --set controller.metrics.enabled=true
+```bash
+kubectl -n ingress-nginx get service ingress-nginx-controller-metrics
 ```
 
 3. install the OTel Scaler

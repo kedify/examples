@@ -82,40 +82,34 @@ make clean
 
 ## k3d Setup
 
-To set up the k3d cluster with the necessary configurations and install the NGINX Ingress Controller, follow these steps:
+Use [Traefik’s Ingress NGINX compatibility provider](https://doc.traefik.io/traefik/reference/install-configuration/providers/kubernetes/kubernetes-ingress-nginx/) on a fresh lab cluster. It handles the `nginx` IngressClass and the annotations shown below. The [community ingress-nginx controller was retired](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/).
 
-1. **Create and Configure the k3d Cluster**:
+```bash
+k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
 
-   First, delete any existing k3d clusters and create a new one with ports configured for HTTP and HTTPS, and disable Traefik:
+helm upgrade --install traefik traefik \
+  --repo https://traefik.github.io/charts \
+  --version 42.4.0 \
+  --namespace traefik --create-namespace \
+  --skip-crds \
+  --set providers.kubernetesCRD.enabled=false \
+  --set ingressClass.enabled=false \
+  --set providers.kubernetesIngress.enabled=false \
+  --set providers.kubernetesIngressNGINX.enabled=true \
+  --set providers.kubernetesIngressNGINX.publishService.enabled=true
 
-   ```bash
-   k3d cluster create --port "9080:80@loadbalancer" --port "9443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
-   ```
+kubectl apply -f - <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+spec:
+  controller: k8s.io/ingress-nginx
+EOF
 
-2. **Install NGINX Ingress Controller**:
-
-   Add the Helm repository for ingress-nginx and update the Helm repository list:
-
-   ```bash
-   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-   helm repo update
-   ```
-
-   Install the NGINX Ingress Controller in the `nginx-ingress` namespace:
-
-   ```bash
-   helm install nginx-ingress ingress-nginx/ingress-nginx \
-     --namespace nginx-ingress \
-     --create-namespace \
-     --set controller.publishService.enabled=true \
-     --set controller.service.type=LoadBalancer
-   ```
-
-   Watch the service to ensure it's running correctly:
-
-   ```bash
-   kubectl get service --namespace nginx-ingress nginx-ingress-ingress-nginx-controller --output wide --watch
-   ```
+kubectl -n traefik rollout status deployment/traefik
+kubectl -n traefik get service traefik
+```
 
 ### Testing without TLS on k3d
 
@@ -177,7 +171,13 @@ To set up the k3d cluster with the necessary configurations and install the NGIN
    Apply the updated application and TLS-enabled ingress configurations:
 
    ```bash
+   openssl req -x509 -nodes -days 30 -newkey rsa:2048 \
+     -keyout server.key -out server.crt -subj "/CN=grpc.keda" \
+     -addext "subjectAltName=DNS:grpc.keda"
    kubectl apply -f config/app.yaml
+   kubectl create secret tls grpc-responder --cert=server.crt --key=server.key --dry-run=client -o yaml | kubectl apply -f -
+   kubectl rollout restart deployment/grpc-responder
+   kubectl rollout status deployment/grpc-responder
    kubectl apply -f config/ingress-tls.yaml
    ```
 
@@ -191,7 +191,7 @@ To set up the k3d cluster with the necessary configurations and install the NGIN
 
 4. **Run the Test**:
 
-   Test the gRPC service with TLS using `grpcurl`:
+   Call the gRPC service and verify its certificate with `grpcurl`:
 
    ```bash
    grpcurl -d '{"name": "Test"}' -cacert server.crt grpc.keda:9443 responder.HelloService/SayHello
@@ -207,7 +207,7 @@ To set up the k3d cluster with the necessary configurations and install the NGIN
 
 ### Autoscaling with KEDA
 
-For both versions of the `grpc-responder`, there are also two versions of the `ScaledObject` with trigger `kedify-http` - plaintext and TLS. Support for TLS includes end-to-end encryption with re-encryption on the `kedify-proxy` and `interceptor` to allow L7 routing. For plaintext gRPC, there is currently a limitted support for cold-starts, it's recommended to scale to 1. For gRPC with TLS, scale to zero works fully as expected.
+For both versions of the `grpc-responder`, there are also two versions of the `ScaledObject` with trigger `kedify-http` - plaintext and TLS. Support for TLS includes end-to-end encryption with re-encryption on the `kedify-proxy` and `interceptor` to allow L7 routing. For plaintext gRPC, there is currently a limitted support for cold-starts, it's recommended to scale to 1. For gRPC with TLS and Traefik, use a Kedify HTTP add-on release whose proxy TLS listener advertises HTTP/2 through ALPN. Traefik needs HTTP/2 to preserve gRPC response trailers during cold starts.
 
 When the application is deployed without TLS, use:
 ```

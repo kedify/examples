@@ -38,8 +38,24 @@ metadata:
   namespace: metallb-system
 EOF
 
-helm upgrade --install ingress-nginx ingress-nginx \
-  --repo https://kubernetes.github.io/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
+helm upgrade --install traefik traefik \
+  --repo https://traefik.github.io/charts \
+  --version 42.4.0 \
+  --namespace traefik --create-namespace \
+  --skip-crds \
+  --set providers.kubernetesCRD.enabled=false \
+  --set ingressClass.enabled=false \
+  --set providers.kubernetesIngress.enabled=false \
+  --set providers.kubernetesIngressNGINX.enabled=true \
+  --set providers.kubernetesIngressNGINX.publishService.enabled=true
+
+kubectl apply -f - <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+spec:
+  controller: k8s.io/ingress-nginx
+EOF
 
 echo "all done"

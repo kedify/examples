@@ -90,7 +90,7 @@ spec:
     spec:
       containers:
       - name: nginx-container
-        image: nginx:latest
+        image: nginx:1.30.7
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
