@@ -5,3 +5,5 @@
 - [samples](samples) hosts sample applications that uses KEDA
   - [Splunk, Flux and OTel autoscaling](samples/splunk-flux-otel) routes HAProxy metrics to Splunk and KEDA, with independent Predictor recording
 - [test-data](test-data) easy to use test data for various Kedify & KEDA resources
+
+<!-- Kedifybot fork test: documentation-only change. -->
