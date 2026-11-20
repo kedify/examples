@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rightsizing-gpu
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm
+    spec:
+      # Prevent the Service from injecting VLLM_PORT into the engine.
+      enableServiceLinks: false
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - key: sku
+          operator: Equal
+          value: gpu
+          effect: NoSchedule
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai
+          args:
+            - --model=facebook/opt-125m
+            - --served-model-name=opt125m
+            - --enforce-eager
+            - --gpu-memory-utilization=0.35
+            - --max-model-len=512
+            - --max-num-seqs=4
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests: {cpu: "1", memory: 2Gi, nvidia.com/gpu: "1"}
+            limits: {cpu: "4", memory: 6Gi, nvidia.com/gpu: "1"}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            failureThreshold: 90
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+          volumeMounts:
+            - {name: shm, mountPath: /dev/shm}
+      volumes:
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm
+spec:
+  selector:
+    app: vllm
+  ports:
+    - {name: http, port: 8000, targetPort: http}

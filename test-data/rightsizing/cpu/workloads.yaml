@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: overprovisioned
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: overprovisioned
+  template:
+    metadata:
+      labels:
+        app: overprovisioned
+    spec:
+      containers:
+        - name: load-generator
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "40"
+            - name: BASELINE_MEMORY_MIB
+              value: "64"
+          resources:
+            requests: {cpu: 600m, memory: 640Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-throttled
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpu-throttled
+  template:
+    metadata:
+      labels:
+        app: cpu-throttled
+    spec:
+      containers:
+        - name: load-generator
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "60"
+            - name: BASELINE_MEMORY_MIB
+              value: "96"
+            - name: SCHEDULE_JSON
+              value: '{"loop":true,"steps":[{"profile":"idle","durationSeconds":600},{"profile":"high","durationSeconds":300}]}'
+          resources:
+            requests: {cpu: 120m, memory: 160Mi}
+            limits: {cpu: 350m, memory: 760Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mixed-containers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mixed-containers
+  template:
+    metadata:
+      labels:
+        app: mixed-containers
+    spec:
+      containers:
+        - name: application
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "100"
+            - name: BASELINE_MEMORY_MIB
+              value: "300"
+          resources:
+            requests: {cpu: 125m, memory: 96Mi}
+            limits: {cpu: 500m, memory: 600Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+        - name: sidecar
+          image: nginx
+          resources:
+            requests: {cpu: 300m, memory: 256Mi}
+            limits: {cpu: 500m, memory: 384Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bursty-unthrottled
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bursty-unthrottled
+  template:
+    metadata:
+      labels:
+        app: bursty-unthrottled
+    spec:
+      containers:
+        - name: load-generator
+          image: ghcr.io/kedify/sample-load-generator
+          env:
+            - name: BASELINE_CPU_MILLICORES
+              value: "60"
+            - name: BASELINE_MEMORY_MIB
+              value: "96"
+            - name: SCHEDULE_JSON
+              value: '{"loop":true,"steps":[{"profile":"idle","durationSeconds":660},{"profile":"high","durationSeconds":300}]}'
+          resources:
+            requests: {cpu: 120m, memory: 160Mi}
+            limits: {cpu: "1", memory: 760Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}

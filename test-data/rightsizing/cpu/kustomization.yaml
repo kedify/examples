@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rightsizing
+resources:
+  - namespace.yaml
+  - workloads.yaml
+  - behavior.yaml
+  - batch.yaml
+images:
+  - name: ghcr.io/kedify/sample-load-generator
+    digest: sha256:b36671f195698e6c7405b04c92833376d4303047d2dd2db56b7abdebfabdd95d
+  - name: nginx
+    newTag: 1.30.7-alpine
+    digest: sha256:bef154735288bc38d99fac41ae63730684bcc661503673a04a0f9bc526ba8598
+  - name: python
+    digest: sha256:9ef1a599f863231c3d91e941389bfdc4a2d6070557243d54df1a4e57015b960e

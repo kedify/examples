@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vllm-load
+spec:
+  schedule: "0 0 * * *"
+  suspend: true
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 3600
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: client
+              image: python
+              command: [python, /bench/load.py]
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+                limits: {cpu: 500m, memory: 192Mi}
+              volumeMounts:
+                - {name: bench, mountPath: /bench, readOnly: true}
+          volumes:
+            - name: bench
+              configMap:
+                name: vllm-benchmark
